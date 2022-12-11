@@ -1,0 +1,5 @@
+.ORIG x3000
+; SUB R1, R2, R3;
+; RST R1
+MLT R1, R2, R3;
+.END
