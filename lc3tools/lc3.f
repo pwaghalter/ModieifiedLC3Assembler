@@ -58,7 +58,7 @@ enum opcode_t {
 
     /* real instruction opcodes */
     OP_ADD, OP_AND, OP_BR, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
-    OP_LEA, OP_NOT, OP_RTI, OP_ST, OP_STI, OP_STR, OP_TRAP, OP_SUB
+    OP_LEA, OP_NOT, OP_RTI, OP_ST, OP_STI, OP_STR, OP_TRAP, OP_SUB, OP_RST,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -78,7 +78,7 @@ static const char* const opnames[NUM_OPS] = {
 
     /* real instruction opcodes */
     "ADD", "AND", "BR", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
-    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB"
+    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB", "RST"
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -129,6 +129,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x002, /* STR: RRI format only         */
     0x040, /* TRAP: I format only          */
     0x003, /* SUB: RRR or RRI formats only */
+    0x020,  /* RST: R format only           */
       
       
     /* trap pseudo-op formats (no operands) */
@@ -253,6 +254,7 @@ STR       {inst.op = OP_STR;   BEGIN (ls_operands);}
 ST        {inst.op = OP_ST;    BEGIN (ls_operands);}
 TRAP      {inst.op = OP_TRAP;  BEGIN (ls_operands);}
 SUB       {inst.op = OP_SUB;   BEGIN (ls_operands);}
+RST       {inst.op = OP_RST;   BEGIN (ls_operands);}
       
     /* rules for trap pseudo-ols */
 GETC      {inst.op = OP_GETC;  BEGIN (ls_operands);}
@@ -624,22 +626,34 @@ generate_instruction (operands_t operands, const char* opstr)
         break;
 
     case OP_SUB:
-        // 1. not
-        write_value (0x903F | (r1 << 9) | (r2 << 6));
         
-        // 2. add #1
-        write_value (0x1020 | (r1 << 9) | (r2 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
-
         // 3. do normal addition
         if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
 		   prevents execution of second, so never fails). */
 	        (void)read_val (o3, &val, 5);
+
+        // 1. not: 
+        // need to clear a register, put the imm5 val in, then not it - how can i make sure that the register isn't used for anythign else?
+        write_value (0x903F | (r1 << 9) | (r2 << 6));
+
 		write_value (0x1020 | (r1 << 9) | (r2 << 6) | (val & 0x1F));
 	    } else
+        {
+        // 1. NOT
+        write_value (0x903F | (r3 << 9) | (r3 << 6));
+        // 2. ADD #1
+        write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
+        // 3. normal addition
 		write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
+        }
         break;
         
+    case OP_RST:
+        // AND register with zero
+        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
+        break;
+
 	case OP_AND:
 	    if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
