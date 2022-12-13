@@ -59,7 +59,7 @@ enum opcode_t {
     /* real instruction opcodes */
     OP_ADD, OP_AND, OP_BR, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
     OP_LEA, OP_NOT, OP_RTI, OP_ST, OP_STI, OP_STR, OP_TRAP, OP_SUB, OP_RST,
-    OP_MLT,
+    OP_MLT, OP_EQL,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -79,7 +79,7 @@ static const char* const opnames[NUM_OPS] = {
 
     /* real instruction opcodes */
     "ADD", "AND", "BR", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
-    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB", "RST", "MLT",
+    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB", "RST", "MLT", "EQL",
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -132,7 +132,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x003, /* SUB: RRR or RRI formats only */
     0x020, /* RST: R format only           */
     0x003, /* MLT: RRR or RRI formats only */
-      
+    0x003, /* EQL: RRR or RRI formats only */
       
     /* trap pseudo-op formats (no operands) */
     0x200, /* GETC: no operands allowed    */
@@ -258,6 +258,7 @@ TRAP      {inst.op = OP_TRAP;  BEGIN (ls_operands);}
 SUB       {inst.op = OP_SUB;   BEGIN (ls_operands);}
 RST       {inst.op = OP_RST;   BEGIN (ls_operands);}
 MLT       {inst.op = OP_MLT;   BEGIN (ls_operands);}
+EQL       {inst.op = OP_EQL;   BEGIN (ls_operands);}
       
     /* rules for trap pseudo-ols */
 GETC      {inst.op = OP_GETC;  BEGIN (ls_operands);}
@@ -683,13 +684,42 @@ generate_instruction (operands_t operands, const char* opstr)
             write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x1F & 0x1F));
 
             // BR not zero to top of loop
-            parse_ccode (yytext + 2);
             write_value (0x0700 | (0xFFD & 0x1FF)); // the part after the or is where to BR to...
 
 
         }
 
         break;
+
+    case OP_EQL:
+        if (operands == O_RRI) {
+            /* Check or read immediate range (error in first pass
+		   prevents execution of second, so never fails). */
+	        (void)read_val (o3, &val, 5);
+        } else { // RRR addressing
+            // 1. subtract
+            write_value (0x903F | (r3 << 9) | (r3 << 6));
+            printf("r1 %d\n", r1*-1);
+            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
+		    write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
+        
+            // BRnp skip one instruction
+            write_value (0x0700 | (0xFFE & 0x1FF)); 
+
+            // 2. if zero, then they are equal and put 1 in dest R
+            // clear R1
+            write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
+
+
+            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
+
+            // 3. if not zero, then they are not equal and put 0 in dest R - this is done when it's cleared at top pf fxn
+            // doing these loads will set CC so if they're eq it'll be 1 and if not it'll be zero - akin to return codes
+        }
+        break;
+    
+
+
 	case OP_AND:
 	    if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
