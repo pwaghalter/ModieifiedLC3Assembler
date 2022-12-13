@@ -59,7 +59,7 @@ enum opcode_t {
     /* real instruction opcodes */
     OP_ADD, OP_AND, OP_BR, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
     OP_LEA, OP_NOT, OP_RTI, OP_ST, OP_STI, OP_STR, OP_TRAP, OP_SUB, OP_RST,
-    OP_MLT, OP_EQL,
+    OP_MLT, OP_EQL, OP_MOV,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -79,7 +79,7 @@ static const char* const opnames[NUM_OPS] = {
 
     /* real instruction opcodes */
     "ADD", "AND", "BR", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
-    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB", "RST", "MLT", "EQL",
+    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB", "RST", "MLT", "EQL", "MOV",
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -133,6 +133,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x020, /* RST: R format only           */
     0x003, /* MLT: RRR or RRI formats only */
     0x003, /* EQL: RRR or RRI formats only */
+    0x004,  /* MOV: RR format only           */
       
     /* trap pseudo-op formats (no operands) */
     0x200, /* GETC: no operands allowed    */
@@ -259,6 +260,7 @@ SUB       {inst.op = OP_SUB;   BEGIN (ls_operands);}
 RST       {inst.op = OP_RST;   BEGIN (ls_operands);}
 MLT       {inst.op = OP_MLT;   BEGIN (ls_operands);}
 EQL       {inst.op = OP_EQL;   BEGIN (ls_operands);}
+MOV       {inst.op = OP_MOV;   BEGIN (ls_operands);}
       
     /* rules for trap pseudo-ols */
 GETC      {inst.op = OP_GETC;  BEGIN (ls_operands);}
@@ -637,19 +639,19 @@ generate_instruction (operands_t operands, const char* opstr)
 		   prevents execution of second, so never fails). */
 	        (void)read_val (o3, &val, 5);
 
-        // 1. not: 
-        // need to clear a register, put the imm5 val in, then not it - how can i make sure that the register isn't used for anythign else?
-        write_value (0x903F | (r1 << 9) | (r2 << 6));
+            write_value (0x1020 | (r1 << 9) | (r2 << 6) | ((val*-1) & 0x1F)); 
+            // 1. not: 
+            // need to clear a register, put the imm5 val in, then not it - how can i make sure that the register isn't used for anythign else?
+            //write_value (0x903F | (r1 << 9) | (r2 << 6));
 
-		write_value (0x1020 | (r1 << 9) | (r2 << 6) | (val & 0x1F));
-	    } else
-        {
-        // 1. NOT
-        write_value (0x903F | (r3 << 9) | (r3 << 6));
-        // 2. ADD #1
-        write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
-        // 3. normal addition
-		write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
+		    //write_value (0x1020 | (r1 << 9) | (r2 << 6) | (val & 0x1F));
+	    } else {
+            // 1. NOT
+            write_value (0x903F | (r3 << 9) | (r3 << 6));
+            // 2. ADD #1
+            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
+            // 3. normal addition
+		    write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
         }
         break;
         
@@ -683,15 +685,14 @@ generate_instruction (operands_t operands, const char* opstr)
             // R3 = R3 - 1
             write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x1F & 0x1F));
 
-            // BR not zero to top of loop
+            // BR not negative to top of loop
             write_value (0x0700 | (0xFFD & 0x1FF)); // the part after the or is where to BR to...
-
 
         }
 
         break;
 
-    case OP_EQL:
+    case OP_EQL: // need to either skip the one not executing or else idk maybe use real C if statements
         if (operands == O_RRI) {
             /* Check or read immediate range (error in first pass
 		   prevents execution of second, so never fails). */
@@ -699,26 +700,34 @@ generate_instruction (operands_t operands, const char* opstr)
         } else { // RRR addressing
             // 1. subtract
             write_value (0x903F | (r3 << 9) | (r3 << 6));
-            printf("r1 %d\n", r1*-1);
+            //printf("r1 %d\n", r1*-1);
             write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
 		    write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
-        
-            // BRnp skip one instruction
-            write_value (0x0700 | (0xFFE & 0x1FF)); 
 
+            // BRz skip two instruction - maybe instead just do a C ifs statement and eihter clear r1 or set = 1?
+            write_value (0x0A01);// | (0x001 & 0x1FF));
+
+            // if ans was neg or pos then skip to here and store 1 in dest R
+            write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
+            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
             // 2. if zero, then they are equal and put 1 in dest R
-            // clear R1
+            // clear R1 - can't just do this at start in case one of the operands is the dest register bc then we'd be clearing it
             write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
 
 
-            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
-
-            // 3. if not zero, then they are not equal and put 0 in dest R - this is done when it's cleared at top pf fxn
+            // 3. if not zero, then they are not equal and put 0 in dest R
             // doing these loads will set CC so if they're eq it'll be 1 and if not it'll be zero - akin to return codes
         }
         break;
     
+    case OP_MOV:
 
+        // 1. LDR R2 R2 #0
+
+	    write_value (0x6000 | (r2 << 9) | (r2 << 6) | (0 & 0x3F));
+        write_value (0x7000 | (r2 << 9) | (r1 << 6) | (0 & 0x3F));
+
+        break;
 
 	case OP_AND:
 	    if (operands == O_RRI) {
