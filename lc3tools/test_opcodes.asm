@@ -1,5 +1,14 @@
 .ORIG x3000
-; SUB R1, R2, R3;
+;SUB R1, R2, #2;
+SUB R0, R1, R1;
 ; RST R1
-MLT R1, R2, R3;
+;MLT R1, R2, R3;
+;EQL R1, R1, R2;
+;MOV R1, R2;
+HALT
+;
+;FIVE	   .FILL	x0005
+;SEVEN	   .FILL	x0007
+;
+
 .END

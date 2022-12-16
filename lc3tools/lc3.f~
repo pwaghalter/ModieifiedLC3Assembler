@@ -58,8 +58,7 @@ enum opcode_t {
 
     /* real instruction opcodes */
     OP_ADD, OP_AND, OP_BR, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
-    OP_LEA, OP_NOT, OP_RTI, OP_ST, OP_STI, OP_STR, OP_TRAP, OP_SUB, OP_RST,
-    OP_MLT, OP_EQL, OP_MOV,
+    OP_LEA, OP_NOT, OP_RTI, OP_ST, OP_STI, OP_STR, OP_TRAP,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -79,7 +78,7 @@ static const char* const opnames[NUM_OPS] = {
 
     /* real instruction opcodes */
     "ADD", "AND", "BR", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
-    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB", "RST", "MLT", "EQL", "MOV",
+    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB"
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -129,12 +128,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x018, /* STI: RI or RL formats only   */
     0x002, /* STR: RRI format only         */
     0x040, /* TRAP: I format only          */
-    0x003, /* SUB: RRR or RRI formats only */
-    0x020, /* RST: R format only           */
-    0x003, /* MLT: RRR or RRI formats only */
-    0x003, /* EQL: RRR or RRI formats only */
-    0x004,  /* MOV: RR format only           */
-      
+
     /* trap pseudo-op formats (no operands) */
     0x200, /* GETC: no operands allowed    */
     0x200, /* HALT: no operands allowed    */
@@ -257,10 +251,6 @@ STR       {inst.op = OP_STR;   BEGIN (ls_operands);}
 ST        {inst.op = OP_ST;    BEGIN (ls_operands);}
 TRAP      {inst.op = OP_TRAP;  BEGIN (ls_operands);}
 SUB       {inst.op = OP_SUB;   BEGIN (ls_operands);}
-RST       {inst.op = OP_RST;   BEGIN (ls_operands);}
-MLT       {inst.op = OP_MLT;   BEGIN (ls_operands);}
-EQL       {inst.op = OP_EQL;   BEGIN (ls_operands);}
-MOV       {inst.op = OP_MOV;   BEGIN (ls_operands);}
       
     /* rules for trap pseudo-ols */
 GETC      {inst.op = OP_GETC;  BEGIN (ls_operands);}
@@ -496,7 +486,7 @@ read_val (const char* s, int* vptr, int bits)
 }
 
 static void
-write_value (int val) // write the instruction and increment code pointer
+write_value (int val)
 {
     unsigned char out[2];
 
@@ -564,7 +554,7 @@ generate_instruction (operands_t operands, const char* opstr)
     int val, r1, r2, r3;
     const unsigned char* o1;
     const unsigned char* o2;
-    const unsigned char* o3; // o3 points to a char aka it holds the mem address of a char
+    const unsigned char* o3;
     const unsigned char* str;
 
     if ((op_format_ok[inst.op] & (1UL << operands)) == 0) {
@@ -629,123 +619,7 @@ generate_instruction (operands_t operands, const char* opstr)
 		write_value (0x1020 | (r1 << 9) | (r2 << 6) | (val & 0x1F));
 	    } else
 		write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
-        break;
-
-    case OP_SUB:
-        
-        // 3. do normal addition
-        if (operands == O_RRI) {
-	    	/* Check or read immediate range (error in first pass
-		   prevents execution of second, so never fails). */
-	        (void)read_val (o3, &val, 5);
-
-            write_value (0x1020 | (r1 << 9) | (r2 << 6) | ((val*-1) & 0x1F)); 
-            // 1. not: 
-            // need to clear a register, put the imm5 val in, then not it - how can i make sure that the register isn't used for anythign else?
-            //write_value (0x903F | (r1 << 9) | (r2 << 6));
-
-		    //write_value (0x1020 | (r1 << 9) | (r2 << 6) | (val & 0x1F));
-	    } else {
-
-            if (r1 == r2 && r2 == r3) { // this case works
-                // rst r1
-                write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
-            }
-            else if (r1 != r2) { // maybe abstract this to a fxn? why bother repeating in the next else
-                // r1 = -r3
-                write_value (0x903F | (r1 << 9) | (r3 << 6));
-                write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-
-                // r1 = r1 + r2
-                 write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
-            }
-
-            else { // r1 == r2
-                // r1 = -r2
-                write_value (0x903F | (r1 << 9) | (r2 << 6));
-                write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-
-                // r1 = r1 + r3
-                write_value (0x1000 | (r1 << 9) | (r1 << 6) | r3);
-                
-                // r1 = -r1
-                write_value (0x903F | (r1 << 9) | (r1 << 6));
-                write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-            }
-            
-
-        }
-        break;
-        
-    case OP_RST:
-        // AND register with zero
-        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
-        break;
-
-    case OP_MLT:
-
-        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
-
-        if (operands == O_RRI) {
-	    	/* Check or read immediate range (error in first pass
-		   prevents execution of second, so never fails). */
-	        (void)read_val (o3, &val, 5);
-
-            // MLT R1, R2, #3 means you want R1 = R2 * #3
-            for (int i=0; i < val; i++) {
-                write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
-            }
-        }
-
-        else { // MLT R1, R2, R3 means you want R1 = R2 * R3
-            // RST R1 (will hold answer) - no need to repeat this which is done above
-            // write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
-
-            // can i save value in r3 and if thats not destR, re load it? what abour MLT R0, R0, R0? i think it would still work - this wouldn't work anyways since we need multiple registers at work in the program so regardless we need multiple cases
-            // R1 = R1 + R2
-            write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
-
-            // R3 = R3 - 1 -> maybe this should be done in a new register; can't just save and restore bc what if want answer in one of the operands?
-            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x1F & 0x1F));
-
-            // BR not negative to top of loop
-            write_value (0x0700 | (0xFFD & 0x1FF)); // the part after the or is where to BR to...
-        }
-        break;
-
-    case OP_EQL: // need to either skip the one not executing or else idk maybe use real C if statements
-        if (operands == O_RRI) {
-            /* Check or read immediate range (error in first pass
-		   prevents execution of second, so never fails). */
-	        (void)read_val (o3, &val, 5);
-        } else { // RRR addressing
-            // 1. subtract
-            write_value (0x903F | (r3 << 9) | (r3 << 6));
-            //printf("r1 %d\n", r1*-1);
-            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
-		    write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
-
-            // BRz skip two instruction - maybe instead just do a C ifs statement and eihter clear r1 or set = 1?
-            write_value (0x0A01);// | (0x001 & 0x1FF));
-
-            // if ans was neg or pos then skip to here and store 1 in dest R
-            write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
-            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
-            // 2. if zero, then they are equal and put 1 in dest R
-            // clear R1 - can't just do this at start in case one of the operands is the dest register bc then we'd be clearing it
-            write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
-
-
-            // 3. if not zero, then they are not equal and put 0 in dest R
-            // doing these loads will set CC so if they're eq it'll be 1 and if not it'll be zero - akin to return codes
-        }
-        break;
-    
-    case OP_MOV:
-	    write_value (0x6000 | (r2 << 9) | (r2 << 6) | (0 & 0x3F));
-        write_value (0x7000 | (r2 << 9) | (r1 << 6) | (0 & 0x3F));
-        break;
-
+	    break;
 	case OP_AND:
 	    if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
