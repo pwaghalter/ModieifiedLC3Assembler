@@ -738,7 +738,7 @@ generate_instruction (operands_t operands, const char* opstr)
         // BRzp #4
         // add neg_count += 1
 
-        //         
+            
 
         if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
@@ -829,11 +829,21 @@ generate_instruction (operands_t operands, const char* opstr)
             while (temp_r == r1 || temp_r == r2 || temp_r == r3) {
                 temp_r++;
             }
-
+            
             // save contents of temp_r
             write_value (0x3000 | (temp_r << 9) | ((val + 0x00E) & 0x1FF)); // need to figure out where this gets stored, def end of program
             
 
+            int neg_count_r = 0;
+            while (neg_count_r == r1 || neg_count_r == r2 || neg_count_r == r3 || neg_count_r == temp_r) {
+                neg_count_r++;
+            }
+            // save contents of neg_count_r
+            write_value (0x3000 | (neg_count_r << 9) | ((val + 0x00F) & 0x1FF)); // need to figure out where this gets stored, def end of program
+
+            // clear neg_count_r
+            write_value (0x5020 | (neg_count_r << 9) | (neg_count_r << 6) | (0x0 & 0x1F)); // AND neg_count_r, neg_count_r, #0
+            
             // case 1: all registers distinct - no new assignments required
             if ((r1 != r2) && (r2 != r3) && (r1 != r3)) { // this has the same code handling as cases 3 and 4, should group together aka just have this be the standard unless one of the other 2 special cases happen
                 // load contents of r3 into temp_r
@@ -849,7 +859,7 @@ generate_instruction (operands_t operands, const char* opstr)
                 int temp_r2 = 0;
                 
                 // locate a second register not used in this multiplication
-                while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3 || temp_r2 == temp_r) {
+                while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3 || temp_r2 == temp_r || temp_r2 == neg_count_r) {
                     temp_r2++;
                     printf("temp r2 = %d", temp_r2);
                 }
@@ -890,7 +900,16 @@ generate_instruction (operands_t operands, const char* opstr)
                 // at the end, restore temp_r
             }
 
+            // if SR2 is negative, it needs to be negated for calculation purposes and then the answer should be negated as well
+            write_value (0x1020 | (sr2 << 9) | (sr2 << 6) | (0x00 & 0x1F)); // ADD SR2, SR2, #0
             
+            // BRzp #1
+            write_value (0x0600 | (0x003));
+            write_value (0x1020 | (neg_count_r << 9) | (neg_count_r << 6) | (0x01 & 0x1F)); // ADD neg_count_r, neg_count_r, #1
+    
+            // negate SR2 so we can do mult properly
+            write_value (0x903F | (sr2 << 9) | (sr2 << 6)); // not sr2, sr2
+            write_value (0x1020 | (sr2 << 9) | (sr2 << 6) | (0x01 & 0x1F)); // ADD sr2, sr2, #1
 
             // do the actual multiplication
             // RST R1 (will hold answer) - no need to repeat this which is done above
@@ -904,6 +923,20 @@ generate_instruction (operands_t operands, const char* opstr)
 
             // BR positive to top of loop
             write_value (0x0300 | (0xFFD & 0x1FF));
+
+            // check whether we will need to negate the answer
+            // this will only happen if neg_count_r == 1
+            write_value (0x1020 | (neg_count_r << 9) | (neg_count_r << 6) | (0xFF & 0x1F)); // ADD neg_count_r, neg_count_r, #-1
+
+            // BRnp #2 aka don't negate if neg_count_r != 1
+            write_value (0x0A00 | (0x002));
+
+            // Negate DestR
+            write_value (0x903F | (destR << 9) | (destR << 6));
+
+            // ADD 1 to Dest R
+            write_value (0x1020 | (destR << 9) | (destR << 6) | (0x01 & 0x1F)); // ADD DestR, DestR, #1
+
         }
         break;
 
