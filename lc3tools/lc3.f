@@ -672,8 +672,6 @@ generate_instruction (operands_t operands, const char* opstr)
                 write_value (0x903F | (r1 << 9) | (r1 << 6));
                 write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
             }
-            
-
         }
         break;
         
@@ -682,36 +680,162 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
         break;
 
-    case OP_MLT:
+    //case OP_MLT:
+        /* printf("o1 %s\n", o1);
+        printf("o2 %s\n", o2);
+        printf("o3 %x\n", &o3); */
 
-        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
+      //  write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F)); //why would I clear R1? what if its the same as R2? what the heck?
 
-        if (operands == O_RRI) {
+        //if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
 		   prevents execution of second, so never fails). */
-	        (void)read_val (o3, &val, 5);
+	      //  (void)read_val (o3, &val, 5);
+            //int negative = 0; // still need to check if SR1 is negative. ugh.
+
+           // if (val < 0) {
+            //    negative = 1;
+             //   val *= -1;
+          //  }
 
             // MLT R1, R2, #3 means you want R1 = R2 * #3
-            for (int i=0; i < val; i++) {
-                write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
-            }
-        }
+           // for (int i=0; i < val; i++) {
+            //    write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+            //}
 
-        else { // MLT R1, R2, R3 means you want R1 = R2 * R3
+           // if (negative == 1) { // need to figure out how to increment negative based on val in SR1
+                // negate and add 1 to DestR akak R1
+            //    write_value (0x903F | (r1 << 9) | (r1 << 6));
+            //    write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+            //}
+        //}
+
+        //else { // MLT R1, R2, R3 means you want R1 = R2 * R3
             // RST R1 (will hold answer) - no need to repeat this which is done above
             // write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
 
             // can i save value in r3 and if thats not destR, re load it? what abour MLT R0, R0, R0? i think it would still work - this wouldn't work anyways since we need multiple registers at work in the program so regardless we need multiple cases
             // R1 = R1 + R2
-            write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+            //write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
 
             // R3 = R3 - 1 -> maybe this should be done in a new register; can't just save and restore bc what if want answer in one of the operands?
-            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x1F & 0x1F));
+            //write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x1F & 0x1F));
 
             // BR not negative to top of loop
-            write_value (0x0700 | (0xFFD & 0x1FF)); // the part after the or is where to BR to...
+            //write_value (0x0700 | (0xFFD & 0x1FF)); // the part after the or is where to BR to...
+        //}
+        //break;
+
+
+    case OP_MLT:
+        // check R3/imm5 neg by adding zero
+        // BRzp #1
+        // add neg_count += 1
+        // save contents of R3 if RRR/imm5
+        // negate R3/imm5
+        // add 1 to R3/imm5 {now R3/imm5 is positive}
+        // check R2 neg by adding zero
+        // BRzp #4
+        // add neg_count += 1
+
+        //         
+
+        if (operands == O_RRI) {
+	    	/* Check or read immediate range (error in first pass
+		   prevents execution of second, so never fails). */
+	        (void)read_val (o3, &val, 5);
+        
+            if (r1 != r2 ) {
+                write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F)); // clear destR
+
+                
+
+                int negative = 0;
+
+                // MLT R1, R2, #3 means you want R1 = R2 * #3 hey should I maybe possibly do this with a loop in lc3? or is it not worth it? does it save lines of lc3 code? no right since i'd need a register to act as a loop counter?
+                if (val < 0) {
+                    val *= -1;
+                    negative = 1;
+                    //write_value (0x1020 | (neg_count_reg << 9) | (neg_count_reg << 6) | (0x01 & 0x1F)); // ADD 1 to neg_count_reg
+                }
+                
+                // no need to check if R2 is negative, since that will be auto factored into the mult. It only matters if val is neg,
+                // since it behaves as the counter and needs to be positive so it can be decremented in the loop - then if it was neg
+                // we factor that in at the end and negate the final answer
+                
+                // do the actual multiplication
+                for (int i=0; i < val; i++) {
+                    write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+                }
+
+                if (negative == 1) { // negate 
+                    write_value (0x903F | (r1 << 9) | (r1 << 6));
+                    write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+                }
+            }
+            else {
+                int temp_r = 0;
+
+                // locate a register not used in this multiplication
+                while (temp_r == r1 || temp_r == r2 || temp_r == r3) {
+                    temp_r++;
+                }
+
+                // ST contents of temporary register
+                write_value (0x3000 | (temp_r << 9) | ((val + 0x00E) & 0x1FF)); // need to figure out where this gets stored, def end of program
+
+                // add contents of R1/R2 (which are the same) into temp_r
+                write_value (0x1020 | (temp_r << 9) | (r2 << 6) | (0x00 & 0x1F)); //ADD temp_r, r1, #0
+                
+                int negative = 0;
+
+                // MLT R1, R2, #3 means you want R1 = R2 * #3 hey should I maybe possibly do this with a loop in lc3? or is it not worth it? does it save lines of lc3 code? no right since i'd need a register to act as a loop counter?
+                if (val < 0) {
+                    val *= -1;
+                    negative = 1;
+                }
+                
+                // no need to check if R2 is negative, since that will be auto factored into the mult. It only matters if val is neg,
+                // since it behaves as the counter and needs to be positive so it can be decremented in the loop - then if it was neg
+                // we factor that in at the end and negate the final answer
+                
+                // do the actual multiplication
+                for (int i=0; i < val - 1; i++) { // to enable code reuse, instead of making this val - 1, clear R1
+                    write_value (0x1000 | (r1 << 9) | (temp_r << 6) | r2);
+                }
+
+                if (negative == 1) { // negate 
+                    write_value (0x903F | (r1 << 9) | (r1 << 6));
+                    write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+                }
+
+                // restore temp_r
+                write_value (0x2000 | (temp_r << 9) | (0x001 & 0x1FF)); // LD temp_r, wherever it was stored
+
+            }
         }
         break;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     case OP_EQL: // need to either skip the one not executing or else idk maybe use real C if statements
         if (operands == O_RRI) {

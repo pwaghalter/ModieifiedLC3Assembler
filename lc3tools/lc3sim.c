@@ -143,6 +143,7 @@ struct command_t {
     cmd_flag_t flags; /* flags for command properties                  */
 };
 
+// can index into this array of commands
 static const struct command_t command[] = {
     {"break",     1, cmd_break,     CMD_FLAG_NONE      },
     {"continue",  1, cmd_continue,  CMD_FLAG_REPEATABLE},
@@ -198,11 +199,16 @@ static const char* const ccodes[8] = {
 
 
 static int 
-execute_instruction ()
+execute_instruction () // this is abstracted away from defining the actual instructions; lc3.f is used to translate from assembler to machine; this is used to execute machine language
 {
     /* Fetch the instruction. */
-    REG (R_IR) = read_memory (REG (R_PC));
-    REG (R_PC) = (REG (R_PC) + 1) & 0xFFFF;
+    REG (R_IR) = read_memory (REG (R_PC)); // read the mem in pc to the IR
+    REG (R_PC) = (REG (R_PC) + 1) & 0xFFFF; // increment pc
+	
+	/*FILE *file_name = fopen("garbage_output.txt", "w");
+	//fputs(REG(3), file_name);
+	fprintf(file_name, "%d", REG (3));
+	fclose(file_name);*/
 
     /* Try to execute it. */
 
