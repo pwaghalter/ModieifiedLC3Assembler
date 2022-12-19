@@ -3739,8 +3739,99 @@ generate_instruction (operands_t operands, const char* opstr)
 
                 // restore temp_r
                 write_value (0x2000 | (temp_r << 9) | (0x001 & 0x1FF)); // LD temp_r, wherever it was stored
-
             }
+        }
+        else { // case RRR - still need to handle negatives!
+            int destR = r1;
+            int sr1 = r2;
+            int sr2 = r3;
+
+            // there are 5 cases: DestR!=SR1!=SR2; DestR==SR1; DestR==SR2; SR1==SR2; DestR==SR1==SR2;
+
+            // if (r1==r2 || r1==r3 || r2==r3) { // in any special cases, we will need a temp register
+            // decided to always use a temp register so as to avoid having complexity of whether resotring SR2 when using as counter
+            // in the normal case, or whether restoring temp_r; instead always use tempR and restore that
+
+            // locate a register not used in this multiplication
+            int temp_r = 0;
+            while (temp_r == r1 || temp_r == r2 || temp_r == r3) {
+                temp_r++;
+            }
+
+            // save contents of temp_r
+            write_value (0x3000 | (temp_r << 9) | ((val + 0x00E) & 0x1FF)); // need to figure out where this gets stored, def end of program
+            
+
+            // case 1: all registers distinct - no new assignments required
+            if ((r1 != r2) && (r2 != r3) && (r1 != r3)) { // this has the same code handling as cases 3 and 4, should group together aka just have this be the standard unless one of the other 2 special cases happen
+                // load contents of r3 into temp_r
+                write_value (0x1020 | (temp_r << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
+
+                // set variable SR2 = temp_r
+                sr2 = temp_r;
+                // at the end, restore temp_r
+            }
+            
+            // case 5: DestR == SR1 == SR2
+            else if (r1 == r2 && r2 == r3) {
+                int temp_r2 = 0;
+                
+                // locate a second register not used in this multiplication
+                while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3 || temp_r2 == temp_r) {
+                    temp_r2++;
+                    printf("temp r2 = %d", temp_r2);
+                }
+
+                // save contents of temp_r2
+                write_value (0x3000 | (temp_r2 << 9) | ((val + 0x00E) & 0x1FF)); // need to figure out where this gets stored, def end of program
+
+                // load contents of r3 into temp_r
+                write_value (0x1020 | (temp_r << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
+
+                // load contents of r3 into temp_r2
+                write_value (0x1020 | (temp_r2 << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r2, r3, #0
+
+                sr1 = temp_r;
+                sr2 = temp_r2;
+            }
+
+            // case 2: DestR == SR1. EX: MLT R4, R4, R5
+            else if (r1 == r2) {
+                
+                // load contents of r2 into temp_r
+                write_value (0x1020 | (temp_r << 9) | (r2 << 6) | (0x00 & 0x1F)); //ADD temp_r, r2, #0
+
+                // set variable SR2 = temp_r
+                sr2 = temp_r;
+                sr1 = r3;
+                // at the end, restore temp_r
+            }
+
+            // case 3: DestR == SR2. EX: MLT R4, R5, R4 
+            // case 4: SR1 == SR2. EX: MLT R4, R5, R5 {same fix works for case 3 and case 4}
+            else if (r1 == r3 || r2 == r3) {
+                // load contents of r3 into temp_r
+                write_value (0x1020 | (temp_r << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
+
+                // set variable SR2 = temp_r
+                sr2 = temp_r;
+                // at the end, restore temp_r
+            }
+
+            
+
+            // do the actual multiplication
+            // RST R1 (will hold answer) - no need to repeat this which is done above
+            write_value (0x5020 | (destR << 9) | (destR << 6) | (0x0 & 0x1F));
+
+            // DestR = DestR + SR1
+            write_value (0x1000 | (destR << 9) | (destR << 6) | sr1);
+
+            // SR2 = SR2 - 1
+            write_value (0x1020 | (sr2 << 9) | (sr2 << 6) | (0x1F & 0x1F));
+
+            // BR positive to top of loop
+            write_value (0x0300 | (0xFFD & 0x1FF));
         }
         break;
 
