@@ -59,7 +59,7 @@ enum opcode_t {
     /* real instruction opcodes */
     OP_ADD, OP_AND, OP_BR, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
     OP_LEA, OP_NOT, OP_RTI, OP_ST, OP_STI, OP_STR, OP_TRAP, OP_SUB, OP_RST,
-    OP_MLT, OP_EQL, OP_MOV,
+    OP_MLT, OP_EQL, OP_MOV, OP_OR, OP_SHFT, OP_EXP,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -79,7 +79,7 @@ static const char* const opnames[NUM_OPS] = {
 
     /* real instruction opcodes */
     "ADD", "AND", "BR", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA",
-    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB", "RST", "MLT", "EQL", "MOV",
+    "NOT", "RTI", "ST", "STI", "STR", "TRAP", "SUB", "RST", "MLT", "EQL", "MOV", "OR", "SHFT", "EXP",
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -133,8 +133,11 @@ static const int op_format_ok[NUM_OPS] = {
     0x020, /* RST: R format only           */
     0x003, /* MLT: RRR or RRI formats only */
     0x003, /* EQL: RRR or RRI formats only */
-    0x004,  /* MOV: RR format only           */
-      
+    0x004, /* MOV: RR format only          */
+    0x003, /* OR: RRR or RRI formats only  */
+    0x002, /* SHFT: RRI format only        */
+    0x003, /* EXP: RRR or RRI formats only */
+
     /* trap pseudo-op formats (no operands) */
     0x200, /* GETC: no operands allowed    */
     0x200, /* HALT: no operands allowed    */
@@ -261,7 +264,10 @@ RST       {inst.op = OP_RST;   BEGIN (ls_operands);}
 MLT       {inst.op = OP_MLT;   BEGIN (ls_operands);}
 EQL       {inst.op = OP_EQL;   BEGIN (ls_operands);}
 MOV       {inst.op = OP_MOV;   BEGIN (ls_operands);}
-      
+OR        {inst.op = OP_OR;    BEGIN (ls_operands);}
+SHFT      {inst.op = OP_SHFT;  BEGIN (ls_operands);}
+EXP       {inst.op = OP_EXP;   BEGIN (ls_operands);}
+
     /* rules for trap pseudo-ols */
 GETC      {inst.op = OP_GETC;  BEGIN (ls_operands);}
 HALT      {inst.op = OP_HALT;  BEGIN (ls_operands);}
@@ -680,65 +686,67 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
         break;
 
-    //case OP_MLT:
-        /* printf("o1 %s\n", o1);
-        printf("o2 %s\n", o2);
-        printf("o3 %x\n", &o3); */
+    case OP_OR: // P OR Q  = NOT (NOT(P) AND NOT(Q))
+        ; // this semilcolon is needed so C doesn't freak out that my case starts w an assignment
+        int temp_r1 = 0;
+        int temp_r2 = 1;
 
-      //  write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F)); //why would I clear R1? what if its the same as R2? what the heck?
+        // locate a register not used in this op
+        while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
+            temp_r1++;
+        }
+        write_value (0x3000 | (temp_r1 << 9) | ((0xFFF) & 0x1FF));
+        write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
 
-        //if (operands == O_RRI) {
-	    	/* Check or read immediate range (error in first pass
-		   prevents execution of second, so never fails). */
-	      //  (void)read_val (o3, &val, 5);
-            //int negative = 0; // still need to check if SR1 is negative. ugh.
+        // locate a register not used in this op
+        while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3) {
+            temp_r2++;
+        }
 
-           // if (val < 0) {
-            //    negative = 1;
-             //   val *= -1;
-          //  }
+        write_value (0x3000 | (temp_r2 << 9) | ((0xFFF) & 0x1FF));
 
-            // MLT R1, R2, #3 means you want R1 = R2 * #3
-           // for (int i=0; i < val; i++) {
-            //    write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
-            //}
+        if (operands == O_RRI) {
+            /* Check or read immediate range (error in first pass
+		    prevents execution of second, so never fails). */
+	        (void)read_val (o3, &val, 5);
 
-           // if (negative == 1) { // need to figure out how to increment negative based on val in SR1
-                // negate and add 1 to DestR akak R1
-            //    write_value (0x903F | (r1 << 9) | (r1 << 6));
-            //    write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-            //}
-        //}
+            // clear temp_r2
+            write_value (0x5020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x0 & 0x1F)); // AND neg_count_r, neg_count_r, #0
 
-        //else { // MLT R1, R2, R3 means you want R1 = R2 * R3
-            // RST R1 (will hold answer) - no need to repeat this which is done above
-            // write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
+            write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (val & 0x1F)); //ADD temp_r, temp_r, val
+        }
+        else {
+            write_value (0x1020 | (temp_r2 << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
+        }
+        // P = NOT P
+	    write_value (0x903F | (temp_r1 << 9) | (temp_r1 << 6));
 
-            // can i save value in r3 and if thats not destR, re load it? what abour MLT R0, R0, R0? i think it would still work - this wouldn't work anyways since we need multiple registers at work in the program so regardless we need multiple cases
-            // R1 = R1 + R2
-            //write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+        // Q = NOT Q
+        write_value (0x903F | (temp_r2 << 9) | (temp_r2 << 6));
 
-            // R3 = R3 - 1 -> maybe this should be done in a new register; can't just save and restore bc what if want answer in one of the operands?
-            //write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x1F & 0x1F));
+        // DestR = P AND Q
+        write_value (0x5000 | (r1 << 9) | (temp_r1 << 6) | temp_r2);
 
-            // BR not negative to top of loop
-            //write_value (0x0700 | (0xFFD & 0x1FF)); // the part after the or is where to BR to...
-        //}
-        //break;
+        // DestR = NOT DestR
+        write_value (0x903F | (r1 << 9) | (r1 << 6));
 
+        // restore temp_r1 and temp_r2
+        if (operands == O_RRI) {
+            write_value (0x2000 | (temp_r1 << 9) | (0xFF6 & 0x1FF));
+            write_value (0x2000 | (temp_r2 << 9) | (0xFF7 & 0x1FF));
+        }
+        else {
+            write_value (0x2000 | (temp_r1 << 9) | (0xFF7 & 0x1FF));
+            write_value (0x2000 | (temp_r2 << 9) | (0xFF8 & 0x1FF));
+        }
 
+        break;
+    
+
+    //case OP_SHFT:
+   // break;
+    
     case OP_MLT:
-        // check R3/imm5 neg by adding zero
-        // BRzp #1
-        // add neg_count += 1
-        // save contents of R3 if RRR/imm5
-        // negate R3/imm5
-        // add 1 to R3/imm5 {now R3/imm5 is positive}
-        // check R2 neg by adding zero
-        // BRzp #4
-        // add neg_count += 1
-
-            
 
         if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
@@ -747,8 +755,6 @@ generate_instruction (operands_t operands, const char* opstr)
         
             if (r1 != r2 ) {
                 write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F)); // clear destR
-
-                
 
                 int negative = 0;
 
@@ -813,7 +819,7 @@ generate_instruction (operands_t operands, const char* opstr)
                 write_value (0x2000 | (temp_r << 9) | (0x001 & 0x1FF)); // LD temp_r, wherever it was stored
             }
         }
-        else { // case RRR - still need to handle negatives!
+        else { // case RRR
             int destR = r1;
             int sr1 = r2;
             int sr2 = r3;
@@ -938,28 +944,8 @@ generate_instruction (operands_t operands, const char* opstr)
             write_value (0x1020 | (destR << 9) | (destR << 6) | (0x01 & 0x1F)); // ADD DestR, DestR, #1
 
         }
+        
         break;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     case OP_EQL: // need to either skip the one not executing or else idk maybe use real C if statements
         if (operands == O_RRI) {
@@ -994,6 +980,54 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x7000 | (r2 << 9) | (r1 << 6) | (0 & 0x3F));
         break;
 
+
+    /* case OP_SHFT: going to implement exponentiation first
+        /* Check or read immediate range (error in first pass
+		   prevents execution of second, so never fails). */
+	    /*(void)read_val (o3, &val, 5);
+
+        if (val == 1) { // 1 indicates right shift
+
+        }
+
+        else if (val == 0) { // 0 indicates left shift
+        // SHFT R1, R2, 0; means left shift R1 by R2 aka R1 = R1 << R2
+        // so R1 = R1 * (2**R2)
+
+        }
+
+        else {} // there is no else that would be an error
+        break; */ 
+
+    case OP_EXP: // must be posivite, no negative exponents allowed!
+        // EXP R1, R2, #3 means R1 = R2 ** #3
+        if (operands == O_RRI) {
+	    	/* Check or read immediate range (error in first pass
+		   prevents execution of second, so never fails). */
+	        (void)read_val (o3, &val, 5);
+
+            // ADD R1, R2, #0
+            write_value (0x1020 | (r1 << 9) | (r2 << 6) | (0x00 & 0x1F));
+
+            for (int i=0; i < val; i++) {
+                // load contents of r2 into tempr so it will reset each time through outer loop
+
+                // do the actual multiplication
+
+                // DestR = DestR + SR1
+                write_value (0x1000 | (r1 << 9) | (r1 << 6) | r1);
+
+                // decrement temp_r
+                write_value (0x1020 | (tempr << 9) | (tempr << 6) | (0x1F & 0x1F));
+
+                // BR positive to top of loop
+                write_value (0x0300 | (0xFFD & 0x1FF));
+            }
+        }
+        else {}
+
+        break;
+
 	case OP_AND:
 	    if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
@@ -1005,8 +1039,8 @@ generate_instruction (operands_t operands, const char* opstr)
 	    break;
 	case OP_BR:
 	    if (operands == O_I)
-	        (void)read_val (o1, &val, 9);
-	    else /* O_L */
+	        (void)read_val (o1, &val, 9); // see the issue here and with all offsets is that we're messing with them by adding tons of code!!! no longer 1:1 mapping of assembler to machine code
+	    else /* O_L aka label */
 	        val = find_label (o1, 9);
 	    write_value (inst.ccode | (val & 0x1FF));
 	    break;
@@ -1159,4 +1193,3 @@ found_label (const char* lname)
 
     free (local);
 }
-
