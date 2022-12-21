@@ -1011,14 +1011,14 @@ generate_instruction (operands_t operands, const char* opstr)
 
             for (int i=0; i < val; i++) {
                 // load contents of r2 into tempr so it will reset each time through outer loop
-
-                // do the actual multiplication
-
+                int temp_r = get_temp_r(r1, r2, val); // val basically just a place holder here
+                
+                // do the inner multiplication
                 // DestR = DestR + SR1
-                write_value (0x1000 | (r1 << 9) | (r1 << 6) | r1);
+                write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
 
                 // decrement temp_r
-                write_value (0x1020 | (tempr << 9) | (tempr << 6) | (0x1F & 0x1F));
+                write_value (0x1020 | (temp_r << 9) | (temp_r << 6) | (0x1F & 0x1F));
 
                 // BR positive to top of loop
                 write_value (0x0300 | (0xFFD & 0x1FF));
@@ -1192,4 +1192,13 @@ found_label (const char* lname)
     }
 
     free (local);
+}
+
+int get_temp_r(int r1, int r2, int r3) {
+    int temp_r = 0;
+    while (temp_r == r1 || temp_r == r2 || temp_r == r3) {
+        temp_r++;
+    }
+
+    return temp_r;
 }
