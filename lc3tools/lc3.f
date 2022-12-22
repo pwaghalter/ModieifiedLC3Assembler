@@ -186,7 +186,11 @@ struct inst_t {
     ccode_t  ccode;
 };
 
-static int pass, line_num, num_errors, saw_orig, code_loc, saw_end;
+static int pass, line_num, num_errors, saw_orig, code_loc, saw_end; // my guess is I'll need to use code_loc to handle changing offsets?
+
+// try to make pc offsets still work...
+static int added_lines = 0;
+
 static inst_t inst;
 static FILE* symout;
 static FILE* objout;
@@ -476,7 +480,7 @@ line_ignored ()
 }
 
 static int
-read_val (const char* s, int* vptr, int bits)
+read_val (const char* s, int* vptr, int bits) // vptr == val pointer aka points to val so we can get the val back to whoever called it
 {
     char* trash;
     long v;
@@ -614,6 +618,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	saw_orig = 2;
 	return;
     }
+    // if we made it here, we are past .orig instruction and have a real one to execute
     if ((pre_parse[operands] & PP_R1) != 0)
         r1 = o1[1] - '0';
     if ((pre_parse[operands] & PP_R2) != 0)
@@ -622,7 +627,7 @@ generate_instruction (operands_t operands, const char* opstr)
         r3 = o3[1] - '0';
     if ((pre_parse[operands] & PP_I2) != 0)
         (void)read_val (o2, &val, 9);
-    if ((pre_parse[operands] & PP_L2) != 0)
+    if ((pre_parse[operands] & PP_L2) != 0) // idk maybe do a check later for the PP_L2?
         val = find_label (o2, 9);
 
     switch (inst.op) {
@@ -687,15 +692,20 @@ generate_instruction (operands_t operands, const char* opstr)
         break;
 
     case OP_OR: // P OR Q  = NOT (NOT(P) AND NOT(Q))
-        ; // this semilcolon is needed so C doesn't freak out that my case starts w an assignment
+        ; // this semicolon is needed so C doesn't freak out that my case starts w an assignment
         int temp_r1 = 0;
         int temp_r2 = 1;
+
+        int start_code_loc = code_loc; // this is part of the fix for hard coded pc offsets in user code.
 
         // locate a register not used in this op
         while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
             temp_r1++;
         }
-        write_value (0x3000 | (temp_r1 << 9) | ((0xFFF) & 0x1FF));
+        write_value (0x3000 | (temp_r1 << 9) | ((0xFFF) & 0x1FF)); // save it to the spot where this line of code is
+        //write_value (0x3000 | (temp_r1 << 9) | ((0x000) & 0x1FF)); // bad attempt to fix the save register situation...
+        // write_value (0x0000);
+        // maybe it's worth just storing it on the user stack, then I don't have to deal with any of this...
         write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
 
         // locate a register not used in this op
@@ -714,6 +724,8 @@ generate_instruction (operands_t operands, const char* opstr)
             write_value (0x5020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x0 & 0x1F)); // AND neg_count_r, neg_count_r, #0
 
             write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (val & 0x1F)); //ADD temp_r, temp_r, val
+
+            added_lines += 1; // in this case there is one more line of machine code than in all other scenarios or OR
         }
         else {
             write_value (0x1020 | (temp_r2 << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
@@ -740,6 +752,7 @@ generate_instruction (operands_t operands, const char* opstr)
             write_value (0x2000 | (temp_r2 << 9) | (0xFF8 & 0x1FF));
         }
 
+        added_lines += (code_loc - start_code_loc - 1); // add the number of lines of lc3 code we added so that pc offsets still work; we add 9 lines of code since the tenth was acoutned for in calculating the offset by the programmer who assumed there'd be a line of machine code - or can I assume that the user knows how many lines of machine code each op takes up??
         break;
     
 
@@ -1038,8 +1051,10 @@ generate_instruction (operands_t operands, const char* opstr)
 		write_value (0x5000 | (r1 << 9) | (r2 << 6) | r3);
 	    break;
 	case OP_BR:
-	    if (operands == O_I)
+	    if (operands == O_I) {
 	        (void)read_val (o1, &val, 9); // see the issue here and with all offsets is that we're messing with them by adding tons of code!!! no longer 1:1 mapping of assembler to machine code
+            val += added_lines;
+        }
 	    else /* O_L aka label */
 	        val = find_label (o1, 9);
 	    write_value (inst.ccode | (val & 0x1FF));
@@ -1058,9 +1073,12 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x4000 | (r1 << 6));
 	    break;
 	case OP_LD:
+        //val += added_lines;
+        //printf("val: %d\n", val);
 	    write_value (0x2000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_LDI:
+        //val += added_lines;
 	    write_value (0xA000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_LDR:
@@ -1068,6 +1086,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x6000 | (r1 << 9) | (r2 << 6) | (val & 0x3F));
 	    break;
 	case OP_LEA:
+        //val += added_lines;
 	    write_value (0xE000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_NOT:
@@ -1077,9 +1096,11 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x8000);
 	    break;
 	case OP_ST:
+        //val += added_lines;
 	    write_value (0x3000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STI:
+        //val += added_lines;
 	    write_value (0xB000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STR:
