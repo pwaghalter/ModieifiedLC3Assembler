@@ -1,5 +1,5 @@
 .ORIG x3000
 
-RAND R0
+EXP R0, R1, R3
 
 .END

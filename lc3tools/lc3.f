@@ -761,212 +761,6 @@ generate_instruction (operands_t operands, const char* opstr)
 
     case OP_SHFT:
     break;
-    
-    /*case OP_MLT:
-        
-        if (operands == O_RRI) {
-	    	Check or read immediate range (error in first pass
-		   prevents execution of second, so never fails).
-	        (void)read_val (o3, &val, 5);
-        
-            if (r1 != r2 ) {
-                write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F)); // clear destR
-
-                int negative = 0;
-
-                // MLT R1, R2, #3 means you want R1 = R2 * #3 hey should I maybe possibly do this with a loop in lc3? or is it not worth it? does it save lines of lc3 code? no right since i'd need a register to act as a loop counter?
-                if (val < 0) {
-                    val *= -1;
-                    negative = 1;
-                    //write_value (0x1020 | (neg_count_reg << 9) | (neg_count_reg << 6) | (0x01 & 0x1F)); // ADD 1 to neg_count_reg
-                }
-                
-                // no need to check if R2 is negative, since that will be auto factored into the mult. It only matters if val is neg,
-                // since it behaves as the counter and needs to be positive so it can be decremented in the loop - then if it was neg
-                // we factor that in at the end and negate the final answer
-                
-                // do the actual multiplication
-                for (int i=0; i < val; i++) {
-                    write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
-                }
-
-                if (negative == 1) { // negate 
-                    write_value (0x903F | (r1 << 9) | (r1 << 6));
-                    write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-                }
-            }
-            else {
-                int temp_r = 0;
-
-                // locate a register not used in this multiplication
-                while (temp_r == r1 || temp_r == r2 || temp_r == r3) {
-                    temp_r++;
-                }
-                
-                // ST contents of temporary register
-                write_value (0x3000 | (temp_r << 9) | (val + 0x00E) & 0x1FF); // prob need to do LDI?
-                num_stored++;
-
-                // add contents of R1/R2 (which are the same) into temp_r
-                write_value (0x1020 | (temp_r << 9) | (r2 << 6) | (0x00 & 0x1F)); //ADD temp_r, r1, #0
-                
-                int negative = 0;
-
-                // MLT R1, R2, #3 means you want R1 = R2 * #3 hey should I maybe possibly do this with a loop in lc3? or is it not worth it? does it save lines of lc3 code? no right since i'd need a register to act as a loop counter?
-                if (val < 0) {
-                    val *= -1;
-                    negative = 1;
-                }
-                
-                // no need to check if R2 is negative, since that will be auto factored into the mult. It only matters if val is neg,
-                // since it behaves as the counter and needs to be positive so it can be decremented in the loop - then if it was neg
-                // we factor that in at the end and negate the final answer
-                
-                // do the actual multiplication
-                for (int i=0; i < val - 1; i++) { // to enable code reuse, instead of making this val - 1, clear R1
-                    write_value (0x1000 | (r1 << 9) | (temp_r << 6) | r2);
-                }
-
-                if (negative == 1) { // negate 
-                    write_value (0x903F | (r1 << 9) | (r1 << 6));
-                    write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-                }
-
-                // restore temp_r
-                //write_value (0x2000 | (temp_r << 9) | ((reserved_mem + num_stored - 1) & 0x1FF));
-                write_value (0x2000 | (temp_r << 9) | (0x001 & 0x1FF));
-            }
-        }
-        else { // case RRR
-            int destR = r1;
-            int sr1 = r2;
-            int sr2 = r3;
-
-            // there are 5 cases: DestR!=SR1!=SR2; DestR==SR1; DestR==SR2; SR1==SR2; DestR==SR1==SR2;
-
-            // if (r1==r2 || r1==r3 || r2==r3) { // in any special cases, we will need a temp register
-            // decided to always use a temp register so as to avoid having complexity of whether resotring SR2 when using as counter
-            // in the normal case, or whether restoring temp_r; instead always use tempR and restore that
-
-            // locate a register not used in this multiplication
-            int temp_r = 0;
-            while (temp_r == r1 || temp_r == r2 || temp_r == r3) {
-                temp_r++;
-            }
-            
-            // save contents of temp_r
-            write_value (0x3000 | (temp_r << 9) | ((val + 0x00E) & 0x1FF)); // need to figure out where this gets stored, def end of program
-            
-
-            int neg_count_r = 0;
-            while (neg_count_r == r1 || neg_count_r == r2 || neg_count_r == r3 || neg_count_r == temp_r) {
-                neg_count_r++;
-            }
-            // save contents of neg_count_r
-            write_value (0x3000 | (neg_count_r << 9) | ((val + 0x00F) & 0x1FF)); // need to figure out where this gets stored, def end of program
-
-            // clear neg_count_r
-            write_value (0x5020 | (neg_count_r << 9) | (neg_count_r << 6) | (0x0 & 0x1F)); // AND neg_count_r, neg_count_r, #0
-            
-            // case 1: all registers distinct - no new assignments required
-            if ((r1 != r2) && (r2 != r3) && (r1 != r3)) { // this has the same code handling as cases 3 and 4, should group together aka just have this be the standard unless one of the other 2 special cases happen
-                // load contents of r3 into temp_r
-                write_value (0x1020 | (temp_r << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
-
-                // set variable SR2 = temp_r
-                sr2 = temp_r;
-                // at the end, restore temp_r
-            }
-            
-            // case 5: DestR == SR1 == SR2
-            else if (r1 == r2 && r2 == r3) {
-                int temp_r2 = 0;
-                
-                // locate a second register not used in this multiplication
-                while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3 || temp_r2 == temp_r || temp_r2 == neg_count_r) {
-                    temp_r2++;
-                    printf("temp r2 = %d", temp_r2);
-                }
-
-                // save contents of temp_r2
-                write_value (0x3000 | (temp_r2 << 9) | ((val + 0x00E) & 0x1FF)); // need to figure out where this gets stored, def end of program
-
-                // load contents of r3 into temp_r
-                write_value (0x1020 | (temp_r << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
-
-                // load contents of r3 into temp_r2
-                write_value (0x1020 | (temp_r2 << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r2, r3, #0
-
-                sr1 = temp_r;
-                sr2 = temp_r2;
-            }
-
-            // case 2: DestR == SR1. EX: MLT R4, R4, R5
-            else if (r1 == r2) {
-                
-                // load contents of r2 into temp_r
-                write_value (0x1020 | (temp_r << 9) | (r2 << 6) | (0x00 & 0x1F)); //ADD temp_r, r2, #0
-
-                // set variable SR2 = temp_r
-                sr2 = temp_r;
-                sr1 = r3;
-                // at the end, restore temp_r
-            }
-
-            // case 3: DestR == SR2. EX: MLT R4, R5, R4 
-            // case 4: SR1 == SR2. EX: MLT R4, R5, R5 {same fix works for case 3 and case 4}
-            else if (r1 == r3 || r2 == r3) {
-                // load contents of r3 into temp_r
-                write_value (0x1020 | (temp_r << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
-
-                // set variable SR2 = temp_r
-                sr2 = temp_r;
-                // at the end, restore temp_r
-            }
-
-            // if SR2 is negative, it needs to be negated for calculation purposes and then the answer should be negated as well
-            write_value (0x1020 | (sr2 << 9) | (sr2 << 6) | (0x00 & 0x1F)); // ADD SR2, SR2, #0
-            
-            // BRzp #1
-            write_value (0x0600 | (0x003));
-            write_value (0x1020 | (neg_count_r << 9) | (neg_count_r << 6) | (0x01 & 0x1F)); // ADD neg_count_r, neg_count_r, #1
-    
-            // negate SR2 so we can do mult properly
-            write_value (0x903F | (sr2 << 9) | (sr2 << 6)); // not sr2, sr2
-            write_value (0x1020 | (sr2 << 9) | (sr2 << 6) | (0x01 & 0x1F)); // ADD sr2, sr2, #1
-
-            // do the actual multiplication
-            // RST R1 (will hold answer) - no need to repeat this which is done above
-            write_value (0x5020 | (destR << 9) | (destR << 6) | (0x0 & 0x1F));
-
-            // DestR = DestR + SR1
-            write_value (0x1000 | (destR << 9) | (destR << 6) | sr1);
-
-            // SR2 = SR2 - 1
-            write_value (0x1020 | (sr2 << 9) | (sr2 << 6) | (0x1F & 0x1F));
-
-            // BR positive to top of loop
-            write_value (0x0300 | (0xFFD & 0x1FF));
-
-            // check whether we will need to negate the answer
-            // this will only happen if neg_count_r == 1
-            write_value (0x1020 | (neg_count_r << 9) | (neg_count_r << 6) | (0xFF & 0x1F)); // ADD neg_count_r, neg_count_r, #-1
-
-            // BRnp #2 aka don't negate if neg_count_r != 1
-            write_value (0x0A00 | (0x002));
-
-            // Negate DestR
-            write_value (0x903F | (destR << 9) | (destR << 6));
-
-            // ADD 1 to Dest R
-            write_value (0x1020 | (destR << 9) | (destR << 6) | (0x01 & 0x1F)); // ADD DestR, DestR, #1
-
-            // ADD 0 to Dest R to make sure CC are set correctly
-            write_value (0x1020 | (destR << 9) | (destR << 6) | (0x00 & 0x1F)); // ADD DestR, DestR, #1
-
-        }
-        
-        break; */
 
     case OP_MLT:
 
@@ -1126,30 +920,107 @@ generate_instruction (operands_t operands, const char* opstr)
 
     case OP_EXP: // must be posivite, no negative exponents allowed!
         // EXP R1, R2, #3 means R1 = R2 ** #3
+        ;
+        int temp_r3 = 0;
         if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
 		   prevents execution of second, so never fails). */
 	        (void)read_val (o3, &val, 5);
 
-            // ADD R1, R2, #0
-            write_value (0x1020 | (r1 << 9) | (r2 << 6) | (0x00 & 0x1F));
+            if (val < 0) {
+                // print error message! how to accomplish this in the RRR case??
+                printf("Error: Negative exponents are not supported. Exponent is: %d.\n", val);
+                num_errors++;
+                break;
+            }
 
-            for (int i=0; i < val; i++) {
-                // load contents of r2 into tempr so it will reset each time through outer loop
-                int temp_r = get_temp_r(r1, r2, val); // val basically just a place holder here
-                
-                // do the inner multiplication
-                // DestR = DestR * SR1
-                write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
-
-                // decrement temp_r
-                write_value (0x1020 | (temp_r << 9) | (temp_r << 6) | (0x1F & 0x1F));
-
-                // BR positive to top of loop
-                write_value (0x0300 | (0xFFD & 0x1FF));
+            // find three temporary registers
+            while (temp_r1 == r1 || temp_r1 == r2) {
+                temp_r1++;
+            }
+            while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == temp_r1) {
+                temp_r2++;
+            }
+            while (temp_r3 == r1 || temp_r3 == r2 || temp_r3 == temp_r1 || temp_r3 == temp_r2) {
+                temp_r3++;
             }
         }
-        else {}
+        else {
+            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x00 & 0x1F)); // ADD r3, r3, #0
+            // if result of that is negative then skip to the end
+            write_value (0x0800 | 0x023); // BRn to the end.
+
+            while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
+                temp_r1++;
+            }
+             while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3 || temp_r2 == temp_r1) {
+                temp_r2++;
+            }
+            while (temp_r3 == r1 || temp_r3 == r2 || temp_r3 == r3 || temp_r3 == temp_r1 || temp_r3 == temp_r2) {
+               temp_r3++;
+            }
+        }
+
+        // save contents of those three temp registers - should abstract these lines into a method since they will be reused often
+        write_value (0x3000 | (temp_r1 << 9) | 0x003); // save temp_r1 to three lines later
+        write_value (0x3000 | (temp_r2 << 9) | 0x003); // save temp_r2 to three lines later
+        write_value (0x3000 | (temp_r3 << 9) | 0x003); // save temp_r2 to three lines later
+
+        write_value (0x0E00 | 0x003); // BRnzp three lines so the saved lines don't execute
+        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
+        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r2 here
+        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r3 here
+
+        // set temp_r1 = r2
+        // set temp_r2 = r3 or val
+        write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); // ADD temp_r1, r2, #0
+
+        if (operands == O_RRI) {
+            write_value (0x5020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x00 & 0x1F)); // clear temp_r2
+            write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (val & 0x1F)); // add temp_r2, temp_r2, #val
+
+            write_value (0x5020 | (temp_r3 << 9) | (temp_r3 << 6) | (0x00 & 0x1F)); // clear temp_r3
+        }
+        else{
+            write_value (0x1020 | (temp_r2 << 9) | (r3 << 6) | (0x00 & 0x1F)); // ADD temp_r2, r3, #0
+        }
+
+        // clear r1
+        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // clear temp_r3
+        // add 1 to r1
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F)); // ADD temp_r3, r3, #0
+
+        write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x00 & 0x1F)); // ADD temp_r2, temp_r2, #0
+        
+        // if exp == 0, r1 = 1, BRz END - the CC will be set to this already from prev op
+        write_value (0x0400 | 0x012); // BRz to the end since the answer should be 1
+    
+        write_value (0x1020 | (temp_r3 << 9) | (r1 << 6) | 0x00 & 0x1F); // ADD temp_r3, r1, #0
+        
+        // save contents of temp_r1 so it can be restored
+        write_value (0x3000 | (temp_r1 << 9) | (0x001 & 0x1FF));
+        write_value (0x0E00 | 0x001); // BRnzp one lines so the saved line doesn't execute
+        write_value (0x0000); // .blkw
+                
+        // r1 = temp_r3 * temp_r1
+        multiply(r1, temp_r3, temp_r1);
+        
+        // restore temp_r1
+        write_value (0x2000 | (temp_r1 << 9) | (0xFF3 & 0x1FF));
+
+        // decrement temp_r2
+        write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0xFF & 0x1F)); // ADD temp_r3, r3, #-1
+
+        // if zero, then we're done. If not, multiply again
+        write_value (0x0A00 | 0xFEE & 0x1FF); // BRnp to multiply again
+
+        // restore temp_r1, temp_r2, temp_r3
+        write_value (0x2000 | (temp_r1 << 9) | (0xFE0 & 0x1FF));
+        write_value (0x2000 | (temp_r2 << 9) | (0xFE0 & 0x1FF));
+        write_value (0x2000 | (temp_r3 << 9) | (0xFE0 & 0x1FF));
+        
+        // reset condition codes
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | 0x00 & 0x1F); // ADD r1, r1, #0
 
         break;
 
