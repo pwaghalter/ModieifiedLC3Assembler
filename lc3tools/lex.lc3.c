@@ -4196,15 +4196,15 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value(0x0000); // .blkw
         write_value(0x0000); // .blkw
         // .FILL prime num
-        // write_value(0x7FED); // largest prime number that fits in 16 bit 2's complement - this is so big, I can't test the mlt
+        // write_value(0x7D03); // coprime with modulus
         write_value(0x003); // use a tiny prime for now for ease of visual testing
         // .FILL const num
-        write_value(0x4444); // constant to add to seed
+        write_value(0x0444); // constant to add to seed, smaller than modulus
 
         // .FILL x5000 - address to find the seed
         write_value(0x5000);
 
-        write_value(0x1234); // modulus
+        write_value(0x7FC3); // modulus
 
         // SEED
         // try loading from x5000 - if nothing is there, use x1234 as the seed.
