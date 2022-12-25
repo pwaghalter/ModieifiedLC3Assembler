@@ -1648,7 +1648,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x003, /* OR: RRR or RRI formats only  */
     0x002, /* SHFT: RRI format only        */
     0x003, /* EXP: RRR or RRI formats only */
-    0x020, /* RAND: R format only          */
+    0x020, /* RAND: RRformat only          */
 
 
     /* trap pseudo-op formats (no operands) */
@@ -4175,15 +4175,15 @@ generate_instruction (operands_t operands, const char* opstr)
 	    break;
     
     // why does the c code loop to find temp registers run each time but the rand() function does not?
-    case OP_RAND: // needs to be R: R1 = destR {linear cong. generator}
+    case OP_RAND: // needs to be RR: R1 = destR, R2 = modulus {linear cong. generator}
         // need hardcoded large prime number to multiply seed
         // need hardcoded large constant to add to multiplied seed
         
-        while (temp_r1 == r1 || temp_r1 == r2) {
+        while (temp_r1 == r1) {
             temp_r1++;
         }
 
-        while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == temp_r1) {
+        while (temp_r2 == r1 | temp_r2 == temp_r1) {
             temp_r2++;
         }
 
@@ -4191,7 +4191,7 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x3000 | (temp_r1 << 9) | 0x002); // save temp_r1 to two lines later
         write_value (0x3000 | (temp_r2 << 9) | 0x002); // save temp_r2 to two lines later
 
-        write_value (0x0E00 | (0x005)); // BRnzp #3
+        write_value (0x0E00 | (0x006)); // BRnzp #6
 
         write_value(0x0000); // .blkw
         write_value(0x0000); // .blkw
@@ -4204,10 +4204,12 @@ generate_instruction (operands_t operands, const char* opstr)
         // .FILL x5000 - address to find the seed
         write_value(0x5000);
 
+        write_value(0x1234); // modulus
+
         // SEED
         // try loading from x5000 - if nothing is there, use x1234 as the seed.
         // at the end of this, store the result in x5000 and it will become the next seed
-        write_value (0xA000 | (temp_r1 << 9) | (0xFFE & 0x1FF)); // LDI temp_r1, FFE
+        write_value (0xA000 | (temp_r1 << 9) | (0xFFD & 0x1FF)); // LDI temp_r1, FFE
         write_value (0x1020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x00 & 0x1F));
         
         // BRnp #1, else to fill it with 0x00FF
@@ -4217,24 +4219,30 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x1020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x0F & 0x1F));
 
         // LD temp_r, prime_num
-        write_value (0x2000 | (temp_r2 << 9) | (0xFF8 & 0x1FF));
+        write_value (0x2000 | (temp_r2 << 9) | (0xFF7 & 0x1FF));
 
         // write_value (0x2000 | (r1 << 9) | (val & 0x1FF));
         // ans = seed * prime_num
         multiply(r1, temp_r1, temp_r2);
 
-        // LD temp_r, const_num
-        write_value (0x2000 | (temp_r2 << 9) | (0xFED & 0x1FF));
+        // LD temp_r2, const_num
+        write_value (0x2000 | (temp_r2 << 9) | (0xFEC & 0x1FF));
 
         // ans = ans + const
         write_value (0x1000 | (r1 << 9) | (r1 << 6) | (temp_r2));
 
+        // LD temp_r2, modulus
+        write_value (0x2000 | (temp_r2 << 9) | (0xFEC & 0x1FF));
+
+        // ans = ans & modulus
+        write_value (0x5000 | (r1 << 9) | (r1 << 6) | temp_r2);
+
         // save the new 'random' number as the seed for next time
-        write_value (0xB000 | (r1 << 9) | (0xFEC & 0x1FF)); // STI R0, x5000
+        write_value (0xB000 | (r1 << 9) | (0xFE9 & 0x1FF)); // STI R0, x5000
 
         // restore temp registers
-        write_value (0x2000 | (temp_r1 << 9) | (0xFE7 & 0x1FF));
-        write_value (0x2000 | (temp_r2 << 9) | (0xFE7 & 0x1FF));
+        write_value (0x2000 | (temp_r1 << 9) | (0xFE4 & 0x1FF));
+        write_value (0x2000 | (temp_r2 << 9) | (0xFE4 & 0x1FF));
         break;
 
     case OP_RST:
