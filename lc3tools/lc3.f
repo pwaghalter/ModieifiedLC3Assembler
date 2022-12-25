@@ -188,10 +188,7 @@ struct inst_t {
     ccode_t  ccode;
 };
 
-static int pass, line_num, num_errors, saw_orig, code_loc, saw_end; // my guess is I'll need to use code_loc to handle changing offsets?
-
-// try to make pc offsets still work...
-static int added_lines = 0;
+static int pass, line_num, num_errors, saw_orig, code_loc, saw_end;
 
 static inst_t inst;
 static FILE* symout;
@@ -635,7 +632,7 @@ generate_instruction (operands_t operands, const char* opstr)
         r3 = o3[1] - '0';
     if ((pre_parse[operands] & PP_I2) != 0)
         (void)read_val (o2, &val, 9);
-    if ((pre_parse[operands] & PP_L2) != 0) // idk maybe do a check later for the PP_L2?
+    if ((pre_parse[operands] & PP_L2) != 0)
         val = find_label (o2, 9);
 
     switch (inst.op) {
@@ -1035,6 +1032,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	    break;
 	case OP_BR:
 	    if (operands == O_I) {
+            printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	        (void)read_val (o1, &val, 9); // see the issue here and with all offsets is that we're messing with them by adding tons of code!!! no longer 1:1 mapping of assembler to machine code
         }
 	    else /* O_L aka label */
@@ -1045,8 +1043,10 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0xC000 | (r1 << 6));
 	    break;
 	case OP_JSR:
-	    if (operands == O_I)
+	    if (operands == O_I) {
+            printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	        (void)read_val (o1, &val, 11);
+        }
 	    else /* O_L */
 	        val = find_label (o1, 11);
 	    write_value (0x4800 | (val & 0x7FF));
@@ -1055,9 +1055,11 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x4000 | (r1 << 6));
 	    break;
 	case OP_LD:
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0x2000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_LDI:
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0xA000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_LDR:
@@ -1065,14 +1067,13 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x6000 | (r1 << 9) | (r2 << 6) | (val & 0x3F));
 	    break;
 	case OP_LEA:
-        //val += added_lines;
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0xE000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_NOT:
 	    write_value (0x903F | (r1 << 9) | (r2 << 6));
 	    break;
     
-    // why does the c code loop to find temp registers run each time but the rand() function does not?
     case OP_RAND: // needs to be RR: R1 = destR, R2 = modulus {linear cong. generator}
         // need hardcoded large prime number to multiply seed
         // need hardcoded large constant to add to multiplied seed
@@ -1152,9 +1153,11 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x8000);
 	    break;
 	case OP_ST:
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0x3000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STI:
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0xB000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STR:

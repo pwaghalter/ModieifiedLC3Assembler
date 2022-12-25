@@ -1,5 +1,5 @@
 .ORIG x3000
 
 EXP R0, R1, R3
-
+BRnzp #3
 .END

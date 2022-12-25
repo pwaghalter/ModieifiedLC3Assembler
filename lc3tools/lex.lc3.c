@@ -1699,10 +1699,7 @@ struct inst_t {
     ccode_t  ccode;
 };
 
-static int pass, line_num, num_errors, saw_orig, code_loc, saw_end; // my guess is I'll need to use code_loc to handle changing offsets?
-
-// try to make pc offsets still work...
-static int added_lines = 0;
+static int pass, line_num, num_errors, saw_orig, code_loc, saw_end;
 
 static inst_t inst;
 static FILE* symout;
@@ -1717,7 +1714,7 @@ static void parse_ccode (const char*);
 static void generate_instruction (operands_t, const char*);
 static void found_label (const char* lname);
 
-#line 1721 "lex.lc3.c"
+#line 1718 "lex.lc3.c"
 /* condition code specification */
 /* operand types */
 /* operand and white space specification */
@@ -1726,7 +1723,7 @@ static void found_label (const char* lname);
 /* exclusive lexing states to read operands, eat garbage lines, and
    check for extra text after .END directive */
 
-#line 1730 "lex.lc3.c"
+#line 1727 "lex.lc3.c"
 
 #define INITIAL 0
 #define ls_operands 1
@@ -1944,12 +1941,12 @@ YY_DECL
 		}
 
 	{
+#line 246 "lc3.f"
+
+
 #line 249 "lc3.f"
-
-
-#line 252 "lc3.f"
     /* rules for real instruction opcodes */
-#line 1953 "lex.lc3.c"
+#line 1950 "lex.lc3.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -2008,263 +2005,263 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 253 "lc3.f"
+#line 250 "lc3.f"
 {inst.op = OP_ADD;   BEGIN (ls_operands);}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 254 "lc3.f"
+#line 251 "lc3.f"
 {inst.op = OP_AND;   BEGIN (ls_operands);}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 255 "lc3.f"
+#line 252 "lc3.f"
 {inst.op = OP_BR;    parse_ccode (yytext + 2); BEGIN (ls_operands);}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 256 "lc3.f"
+#line 253 "lc3.f"
 {inst.op = OP_JMP;   BEGIN (ls_operands);}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 257 "lc3.f"
+#line 254 "lc3.f"
 {inst.op = OP_JSRR;  BEGIN (ls_operands);}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 258 "lc3.f"
+#line 255 "lc3.f"
 {inst.op = OP_JSR;   BEGIN (ls_operands);}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 259 "lc3.f"
+#line 256 "lc3.f"
 {inst.op = OP_LDI;   BEGIN (ls_operands);}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 260 "lc3.f"
+#line 257 "lc3.f"
 {inst.op = OP_LDR;   BEGIN (ls_operands);}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 261 "lc3.f"
+#line 258 "lc3.f"
 {inst.op = OP_LD;    BEGIN (ls_operands);}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 262 "lc3.f"
+#line 259 "lc3.f"
 {inst.op = OP_LEA;   BEGIN (ls_operands);}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 263 "lc3.f"
+#line 260 "lc3.f"
 {inst.op = OP_NOT;   BEGIN (ls_operands);}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 264 "lc3.f"
+#line 261 "lc3.f"
 {inst.op = OP_RTI;   BEGIN (ls_operands);}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 265 "lc3.f"
+#line 262 "lc3.f"
 {inst.op = OP_STI;   BEGIN (ls_operands);}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 266 "lc3.f"
+#line 263 "lc3.f"
 {inst.op = OP_STR;   BEGIN (ls_operands);}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 267 "lc3.f"
+#line 264 "lc3.f"
 {inst.op = OP_ST;    BEGIN (ls_operands);}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 268 "lc3.f"
+#line 265 "lc3.f"
 {inst.op = OP_TRAP;  BEGIN (ls_operands);}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 269 "lc3.f"
+#line 266 "lc3.f"
 {inst.op = OP_SUB;   BEGIN (ls_operands);}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 270 "lc3.f"
+#line 267 "lc3.f"
 {inst.op = OP_RST;   BEGIN (ls_operands);}
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 271 "lc3.f"
+#line 268 "lc3.f"
 {inst.op = OP_MLT;   BEGIN (ls_operands);}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 272 "lc3.f"
+#line 269 "lc3.f"
 {inst.op = OP_EQL;   BEGIN (ls_operands);}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 273 "lc3.f"
+#line 270 "lc3.f"
 {inst.op = OP_MOV;   BEGIN (ls_operands);}
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 274 "lc3.f"
+#line 271 "lc3.f"
 {inst.op = OP_OR;    BEGIN (ls_operands);}
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 275 "lc3.f"
+#line 272 "lc3.f"
 {inst.op = OP_SHFT;  BEGIN (ls_operands);}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 276 "lc3.f"
+#line 273 "lc3.f"
 {inst.op = OP_EXP;   BEGIN (ls_operands);}
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 277 "lc3.f"
+#line 274 "lc3.f"
 {inst.op = OP_RAND;   BEGIN (ls_operands);}
 	YY_BREAK
 /* rules for trap pseudo-ols */
 case 26:
 YY_RULE_SETUP
-#line 280 "lc3.f"
+#line 277 "lc3.f"
 {inst.op = OP_GETC;  BEGIN (ls_operands);}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 281 "lc3.f"
+#line 278 "lc3.f"
 {inst.op = OP_HALT;  BEGIN (ls_operands);}
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 282 "lc3.f"
+#line 279 "lc3.f"
 {inst.op = OP_IN;    BEGIN (ls_operands);}
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 283 "lc3.f"
+#line 280 "lc3.f"
 {inst.op = OP_OUT;   BEGIN (ls_operands);}
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 284 "lc3.f"
+#line 281 "lc3.f"
 {inst.op = OP_PUTS;  BEGIN (ls_operands);}
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 285 "lc3.f"
+#line 282 "lc3.f"
 {inst.op = OP_PUTSP; BEGIN (ls_operands);}
 	YY_BREAK
 /* rules for non-trap pseudo-ops */
 case 32:
 YY_RULE_SETUP
-#line 288 "lc3.f"
+#line 285 "lc3.f"
 {inst.op = OP_FILL;  BEGIN (ls_operands);}
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 289 "lc3.f"
+#line 286 "lc3.f"
 {inst.op = OP_RET;   BEGIN (ls_operands);}
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 290 "lc3.f"
+#line 287 "lc3.f"
 {inst.op = OP_STRINGZ; BEGIN (ls_operands);}
 	YY_BREAK
 /* rules for directives */
 case 35:
 YY_RULE_SETUP
-#line 293 "lc3.f"
+#line 290 "lc3.f"
 {inst.op = OP_BLKW; BEGIN (ls_operands);}
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 294 "lc3.f"
+#line 291 "lc3.f"
 {saw_end = 1;       BEGIN (ls_finished);}
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 295 "lc3.f"
+#line 292 "lc3.f"
 {inst.op = OP_ORIG; BEGIN (ls_operands);}
 	YY_BREAK
 /* rules for operand formats */
 case 38:
 /* rule 38 can match eol */
 YY_RULE_SETUP
-#line 298 "lc3.f"
+#line 295 "lc3.f"
 {generate_instruction (O_RRR, yytext); BEGIN (0);}
 	YY_BREAK
 case 39:
 /* rule 39 can match eol */
 YY_RULE_SETUP
-#line 299 "lc3.f"
+#line 296 "lc3.f"
 {generate_instruction (O_RRI, yytext); BEGIN (0);}
 	YY_BREAK
 case 40:
 /* rule 40 can match eol */
 YY_RULE_SETUP
-#line 300 "lc3.f"
+#line 297 "lc3.f"
 {generate_instruction (O_RR, yytext);  BEGIN (0);}
 	YY_BREAK
 case 41:
 /* rule 41 can match eol */
 YY_RULE_SETUP
-#line 301 "lc3.f"
+#line 298 "lc3.f"
 {generate_instruction (O_RI, yytext);  BEGIN (0);}
 	YY_BREAK
 case 42:
 /* rule 42 can match eol */
 YY_RULE_SETUP
-#line 302 "lc3.f"
+#line 299 "lc3.f"
 {generate_instruction (O_RL, yytext);  BEGIN (0);}
 	YY_BREAK
 case 43:
 /* rule 43 can match eol */
 YY_RULE_SETUP
-#line 303 "lc3.f"
+#line 300 "lc3.f"
 {generate_instruction (O_R, yytext);   BEGIN (0);}
 	YY_BREAK
 case 44:
 /* rule 44 can match eol */
 YY_RULE_SETUP
-#line 304 "lc3.f"
+#line 301 "lc3.f"
 {generate_instruction (O_I, yytext);   BEGIN (0);}
 	YY_BREAK
 case 45:
 /* rule 45 can match eol */
 YY_RULE_SETUP
-#line 305 "lc3.f"
+#line 302 "lc3.f"
 {generate_instruction (O_L, yytext);   BEGIN (0);}
 	YY_BREAK
 case 46:
 /* rule 46 can match eol */
 YY_RULE_SETUP
-#line 306 "lc3.f"
+#line 303 "lc3.f"
 {generate_instruction (O_S, yytext);   BEGIN (0);}
 	YY_BREAK
 case 47:
 /* rule 47 can match eol */
 YY_RULE_SETUP
-#line 307 "lc3.f"
+#line 304 "lc3.f"
 {generate_instruction (O_, yytext);    BEGIN (0);}
 	YY_BREAK
 /* eat excess white space */
 case 48:
 YY_RULE_SETUP
-#line 310 "lc3.f"
+#line 307 "lc3.f"
 {}  
 	YY_BREAK
 case 49:
 /* rule 49 can match eol */
 YY_RULE_SETUP
-#line 311 "lc3.f"
+#line 308 "lc3.f"
 {new_inst_line (); /* a blank line */ }
 	YY_BREAK
 /* labels, with or without subsequent colons */\
@@ -2275,65 +2272,65 @@ YY_RULE_SETUP
      */
 case 50:
 YY_RULE_SETUP
-#line 319 "lc3.f"
+#line 316 "lc3.f"
 {found_label (yytext);}
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 320 "lc3.f"
+#line 317 "lc3.f"
 {found_label (yytext);}
 	YY_BREAK
 /* error handling??? */
 case 52:
 /* rule 52 can match eol */
 YY_RULE_SETUP
-#line 323 "lc3.f"
+#line 320 "lc3.f"
 {unterminated_string (); BEGIN (0);}
 	YY_BREAK
 case 53:
 /* rule 53 can match eol */
 YY_RULE_SETUP
-#line 324 "lc3.f"
+#line 321 "lc3.f"
 {bad_operands (); BEGIN (0);}
 	YY_BREAK
 case 54:
 /* rule 54 can match eol */
 YY_RULE_SETUP
-#line 325 "lc3.f"
+#line 322 "lc3.f"
 {
     bad_operands ();
 }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 329 "lc3.f"
+#line 326 "lc3.f"
 {BEGIN (ls_garbage);}
 	YY_BREAK
 case 56:
 /* rule 56 can match eol */
 YY_RULE_SETUP
-#line 330 "lc3.f"
+#line 327 "lc3.f"
 {bad_line (); BEGIN (0);}
 	YY_BREAK
 /* parsing after the .END directive */
 case 57:
 /* rule 57 can match eol */
 YY_RULE_SETUP
-#line 333 "lc3.f"
+#line 330 "lc3.f"
 {new_inst_line (); /* a blank line  */}
 	YY_BREAK
 case 58:
 /* rule 58 can match eol */
 YY_RULE_SETUP
-#line 334 "lc3.f"
+#line 331 "lc3.f"
 {line_ignored (); return 0;}
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 336 "lc3.f"
+#line 333 "lc3.f"
 ECHO;
 	YY_BREAK
-#line 2337 "lex.lc3.c"
+#line 2334 "lex.lc3.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(ls_operands):
 case YY_STATE_EOF(ls_garbage):
@@ -3304,7 +3301,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 336 "lc3.f"
+#line 333 "lc3.f"
 
 
 int
@@ -3608,7 +3605,7 @@ generate_instruction (operands_t operands, const char* opstr)
         r3 = o3[1] - '0';
     if ((pre_parse[operands] & PP_I2) != 0)
         (void)read_val (o2, &val, 9);
-    if ((pre_parse[operands] & PP_L2) != 0) // idk maybe do a check later for the PP_L2?
+    if ((pre_parse[operands] & PP_L2) != 0)
         val = find_label (o2, 9);
 
     switch (inst.op) {
@@ -4008,6 +4005,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	    break;
 	case OP_BR:
 	    if (operands == O_I) {
+            printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	        (void)read_val (o1, &val, 9); // see the issue here and with all offsets is that we're messing with them by adding tons of code!!! no longer 1:1 mapping of assembler to machine code
         }
 	    else /* O_L aka label */
@@ -4018,8 +4016,10 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0xC000 | (r1 << 6));
 	    break;
 	case OP_JSR:
-	    if (operands == O_I)
+	    if (operands == O_I) {
+            printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	        (void)read_val (o1, &val, 11);
+        }
 	    else /* O_L */
 	        val = find_label (o1, 11);
 	    write_value (0x4800 | (val & 0x7FF));
@@ -4028,9 +4028,11 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x4000 | (r1 << 6));
 	    break;
 	case OP_LD:
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0x2000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_LDI:
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0xA000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_LDR:
@@ -4038,14 +4040,13 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x6000 | (r1 << 9) | (r2 << 6) | (val & 0x3F));
 	    break;
 	case OP_LEA:
-        //val += added_lines;
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0xE000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_NOT:
 	    write_value (0x903F | (r1 << 9) | (r2 << 6));
 	    break;
     
-    // why does the c code loop to find temp registers run each time but the rand() function does not?
     case OP_RAND: // needs to be RR: R1 = destR, R2 = modulus {linear cong. generator}
         // need hardcoded large prime number to multiply seed
         // need hardcoded large constant to add to multiplied seed
@@ -4125,9 +4126,11 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x8000);
 	    break;
 	case OP_ST:
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0x3000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STI:
+        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	    write_value (0xB000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STR:
