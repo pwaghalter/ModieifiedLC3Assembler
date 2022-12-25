@@ -3551,6 +3551,7 @@ generate_instruction (operands_t operands, const char* opstr)
     int temp_r1 = 0;
     int temp_r2 = 1;
     int neg_r = 0;
+    int rand_num;
 
     const unsigned char* o1;
     const unsigned char* o2;
@@ -3957,10 +3958,6 @@ generate_instruction (operands_t operands, const char* opstr)
             while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == temp_r1) {
                 temp_r2++;
             }
-
-            while (neg_r == r1 || neg_r == r2 || neg_r == temp_r1 || neg_r == temp_r2) {
-                neg_r++;
-            }
         }
         else {
             while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
@@ -3969,32 +3966,31 @@ generate_instruction (operands_t operands, const char* opstr)
              while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3 || temp_r2 == temp_r1) {
                 temp_r2++;
             }
-
-            while (neg_r == r1 || neg_r == r2 || neg_r == r3 || neg_r == temp_r1 || neg_r == temp_r2) {
-                neg_r++;
-            }
         }
 
         // save contents of those three temp registers - should abstract these lines into a method since they will be reused often
-        write_value (0x3000 | (temp_r1 << 9) | 0x003); // save temp_r1 to three lines later
-        write_value (0x3000 | (temp_r2 << 9) | 0x003); // save temp_r2 to three lines later
-        write_value (0x3000 | (neg_r << 9) | 0x003); // save neg_r to three lines later
-        write_value (0x0E00 | 0x003); // BRnzp three lines so the saved lines don't execute
+        write_value (0x3000 | (temp_r1 << 9) | 0x002); // save temp_r1 to three lines later
+        write_value (0x3000 | (temp_r2 << 9) | 0x002); // save temp_r2 to three lines later
+        //write_value (0x3000 | (neg_r << 9) | 0x003); // save neg_r to three lines later
+        write_value (0x0E00 | 0x002); // BRnzp three lines so the saved lines don't execute
         write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
         write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r2 here
-        write_value (0x0000); // basically a .blkw - save this spot so we can save neg_r here
+        //write_value (0x0000); // basically a .blkw - save this spot so we can save neg_r here
 
         write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); // ADD temp_r1, r2, #0
 
         if (operands == O_RRI) {
             write_value (0x5020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x00 & 0x1F)); // clear temp_r2
-            printf("val %d", val);
             write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (val & 0x1F)); // add temp_r2, temp_r2, #val
         }
         else{
             write_value (0x1020 | (temp_r2 << 9) | (r3 << 6) | (0x00 & 0x1F)); // ADD temp_r2, r3, #0
         }
 
+        // business logic abstracted to a method for reuse in other ops
+        multiply(r1, temp_r1, temp_r2);
+
+        /*
         //clear neg_r
         write_value (0x5020 | (neg_r << 9) | (neg_r << 6) | (0x00 & 0x1F)); // clear temp_r2
 
@@ -4030,24 +4026,23 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x903F | (r1 << 9) | (r1 << 6));
 
         // ADD 1 to r1
-        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F)); // ADD DestR, DestR, #1
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F)); // ADD DestR, DestR, #1 */
 
-
+        // restore all temp registers
         if (operands == O_RRI) {
-            write_value (0x2000 | (temp_r1 << 9) | (0xFEB & 0x1FF)); // LD temp_r1
-            write_value (0x2000 | (temp_r2 << 9) | (0xFEB & 0x1FF)); // LD temp_r2
-            write_value (0x2000 | (neg_r << 9) | (0xFEB & 0x1FF)); // LD neg_r
+            write_value (0x2000 | (temp_r1 << 9) | (0xFEF & 0x1FF)); // LD temp_r1
+            write_value (0x2000 | (temp_r2 << 9) | (0xFEF & 0x1FF)); // LD temp_r2
+            //write_value (0x2000 | (neg_r << 9) | (0xFEB & 0x1FF)); // LD neg_r
         }
         else {
-            // restore all temp registers
-            write_value (0x2000 | (temp_r1 << 9) | (0xFEC & 0x1FF)); // LD temp_r1
-            write_value (0x2000 | (temp_r2 << 9) | (0xFEC & 0x1FF)); // LD temp_r2
-            write_value (0x2000 | (neg_r << 9) | (0xFEC & 0x1FF)); // LD neg_r
+            write_value (0x2000 | (temp_r1 << 9) | (0xFF0 & 0x1FF)); // LD temp_r1
+            write_value (0x2000 | (temp_r2 << 9) | (0xFF0 & 0x1FF)); // LD temp_r2
+            //write_value (0x2000 | (neg_r << 9) | (0xFEC & 0x1FF)); // LD neg_r
         }
 
         // ADD r1, r1, #0 to restore condition codes
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
-        break;
+        break; 
 
 
     case OP_EQL: // need to either skip the one not executing or else idk maybe use real C if statements
@@ -4179,17 +4174,67 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x903F | (r1 << 9) | (r2 << 6));
 	    break;
     
-    case OP_RAND: // needs to be RR: R1 = destR, R2 = seed {linear cong. generator},
+    // why does the c code loop to find temp registers run each time but the rand() function does not?
+    case OP_RAND: // needs to be R: R1 = destR {linear cong. generator}
         // need hardcoded large prime number to multiply seed
         // need hardcoded large constant to add to multiplied seed
-	    
-        write_value (0x0E00 | (0x002)); // BRnzp #2
+        
+        while (temp_r1 == r1 || temp_r1 == r2) {
+            temp_r1++;
+        }
+
+        while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == temp_r1) {
+            temp_r2++;
+        }
+
+        // Save temp_r's contents
+        write_value (0x3000 | (temp_r1 << 9) | 0x002); // save temp_r1 to two lines later
+        write_value (0x3000 | (temp_r2 << 9) | 0x002); // save temp_r2 to two lines later
+
+        write_value (0x0E00 | (0x005)); // BRnzp #3
+
+        write_value(0x0000); // .blkw
+        write_value(0x0000); // .blkw
         // .FILL prime num
-        write_value(0x7FED); // largest prime number that fits in 16 bit 2's complement
+        // write_value(0x7FED); // largest prime number that fits in 16 bit 2's complement - this is so big, I can't test the mlt
+        write_value(0x003); // use a tiny prime for now for ease of visual testing
         // .FILL const num
-        write_value(0x4444); // constant to add to seed - too big, needs to fit in a register. maybe this algorithm isn't good?
+        write_value(0x4444); // constant to add to seed
+
+        // .FILL x5000 - address to find the seed
+        write_value(0x5000);
+
+        // SEED
+        // try loading from x5000 - if nothing is there, use x1234 as the seed.
+        // at the end of this, store the result in x5000 and it will become the next seed
+        write_value (0xA000 | (temp_r1 << 9) | (0xFFE & 0x1FF)); // LDI temp_r1, FFE
+        write_value (0x1020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x00 & 0x1F));
+        
+        // BRnp #1, else to fill it with 0x00FF
+        write_value ((0x0A00) | (0x001 & 0x1FF));
+        
+        // ADD R0, R0, #15
+        write_value (0x1020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x0F & 0x1F));
+
+        // LD temp_r, prime_num
+        write_value (0x2000 | (temp_r2 << 9) | (0xFF8 & 0x1FF));
+
+        // write_value (0x2000 | (r1 << 9) | (val & 0x1FF));
         // ans = seed * prime_num
+        multiply(r1, temp_r1, temp_r2);
+
+        // LD temp_r, const_num
+        write_value (0x2000 | (temp_r2 << 9) | (0xFED & 0x1FF));
+
         // ans = ans + const
+        write_value (0x1000 | (r1 << 9) | (r1 << 6) | (temp_r2));
+
+        // save the new 'random' number as the seed for next time
+        write_value (0xB000 | (r1 << 9) | (0xFEC & 0x1FF)); // STI R0, x5000
+
+        // restore temp registers
+        write_value (0x2000 | (temp_r1 << 9) | (0xFE7 & 0x1FF));
+        write_value (0x2000 | (temp_r2 << 9) | (0xFE7 & 0x1FF));
         break;
 
     case OP_RST:
@@ -4201,11 +4246,9 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x8000);
 	    break;
 	case OP_ST:
-        //val += added_lines;
 	    write_value (0x3000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STI:
-        //val += added_lines;
 	    write_value (0xB000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STR:
@@ -4331,4 +4374,38 @@ int get_temp_r(int r1, int r2, int r3) {
 
 int get_rand_int(int max) {
     return rand() % max;
+}
+
+void multiply(int r1, int temp_r1, int temp_r2) {
+    // clear r1 which will hold the answer
+    write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
+    
+    // if temp_r2 is negative, it needs to be negated for calculation purposes
+    // also negate temp_r1 in this case, then the negatives are all taken care of
+    write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x00 & 0x1F)); // ADD temp_r2, temp_r2, #0
+
+    // BRz past the loop if temp_r2 is zero, since this means the answer is just zero
+    write_value (0x0400 | (0x008));
+
+    // BRp #4 to skip negating if not needed
+    write_value (0x0200 | (0x004));
+    
+    // negate temp_r2 so we can do mult properly
+    write_value (0x903F | (temp_r2 << 9) | (temp_r2 << 6)); // not sr2, sr2
+    write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x01 & 0x1F)); // ADD sr2, sr2, #1
+    write_value (0x903F | (temp_r1 << 9) | (temp_r1 << 6)); // not sr1, sr1
+    write_value (0x1020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x01 & 0x1F)); // ADD sr1, sr1, #1
+
+    // do the actual multiplication
+    // r1 = r1 + SR1
+    write_value (0x1000 | (r1 << 9) | (r1 << 6) | temp_r1);
+
+    // decrement temp_r2
+    write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x1F & 0x1F));
+
+    // BR positive to top of loop
+    write_value (0x0300 | (0xFFD & 0x1FF));
+
+    // restore all temp registers - this should be done by the caller fxn
+
 }

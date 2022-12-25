@@ -1,6 +1,6 @@
 .ORIG x3000
 
-MLT R1, R1, #-3;
-HALT;
+RAND R0
+
 
 .END
