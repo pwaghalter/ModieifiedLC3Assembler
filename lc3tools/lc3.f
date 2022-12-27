@@ -574,6 +574,7 @@ generate_instruction (operands_t operands, const char* opstr)
     int val, r1, r2, r3;
     int temp_r1 = 0;
     int temp_r2 = 1;
+    int temp_r3 = 0;
     int neg_r = 0;
     int rand_num;
 
@@ -761,6 +762,11 @@ generate_instruction (operands_t operands, const char* opstr)
 
     case OP_MLT:
 
+        //ADD R2, R2, #0 - this is an optimization for case of R2 == 0 ; if i make this change it will effect exp and rand also
+        //write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0x00 & 0x1F)); // add temp_r2, temp_r2, #val
+        // BRz to the end so nothing happens when the operand is zero
+
+
         // no matter what, we will use three registers for simplicity of code/readability
         // we need two temporary registers: r2, r3, and one to keep track of negativeness
         
@@ -789,11 +795,9 @@ generate_instruction (operands_t operands, const char* opstr)
         // save contents of those three temp registers - should abstract these lines into a method since they will be reused often
         write_value (0x3000 | (temp_r1 << 9) | 0x002); // save temp_r1 to three lines later
         write_value (0x3000 | (temp_r2 << 9) | 0x002); // save temp_r2 to three lines later
-        //write_value (0x3000 | (neg_r << 9) | 0x003); // save neg_r to three lines later
         write_value (0x0E00 | 0x002); // BRnzp three lines so the saved lines don't execute
         write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
         write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r2 here
-        //write_value (0x0000); // basically a .blkw - save this spot so we can save neg_r here
 
         write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); // ADD temp_r1, r2, #0
 
@@ -807,44 +811,6 @@ generate_instruction (operands_t operands, const char* opstr)
 
         // business logic abstracted to a method for reuse in other ops
         multiply(r1, temp_r1, temp_r2);
-
-        /*
-        //clear neg_r
-        write_value (0x5020 | (neg_r << 9) | (neg_r << 6) | (0x00 & 0x1F)); // clear temp_r2
-
-        // if temp_r2 is negative, it needs to be negated for calculation purposes and then the answer should be negated as well
-        write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x00 & 0x1F)); // ADD temp_r2, temp_r2, #0
-
-        // BRzp #2 to skip negating if not needed
-        write_value (0x0600 | (0x003));
-    
-        // negate temp_r2 so we can do mult properly
-        write_value (0x903F | (temp_r2 << 9) | (temp_r2 << 6)); // not sr2, sr2
-        write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x01 & 0x1F)); // ADD sr2, sr2, #1
-        write_value (0x1020 | (neg_r << 9) | (neg_r << 6) | (0x01 & 0x1F)); // ADD neg_r, neg_r, #1 - now we know we may need to negate our answer later
-
-        // do the actual multiplication
-        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F)); // clear r1 which will hold the answer
-
-        // r1 = r1 + SR1
-        write_value (0x1000 | (r1 << 9) | (r1 << 6) | temp_r1);
-
-        // temp_r2--
-        write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x1F & 0x1F));
-
-        // BR positive to top of loop
-        write_value (0x0300 | (0xFFD & 0x1FF));
-
-        // check whether we will need to negate the answer
-        // this will only happen if neg_r == 1
-        write_value (0x1020 | (neg_r << 9) | (neg_r << 6) | (0x00 & 0x1F)); // ADD neg_r, neg_r, #0
-        write_value (0x0C00 | (0x002)); // BRnz #2 {means that neg_r == 0 so R3 was not negative}
-        
-        // Negate r1
-        write_value (0x903F | (r1 << 9) | (r1 << 6));
-
-        // ADD 1 to r1
-        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F)); // ADD DestR, DestR, #1 */
 
         // restore all temp registers
         if (operands == O_RRI) {
@@ -896,29 +862,9 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x7000 | (r2 << 9) | (r1 << 6) | (0 & 0x3F));
         break;
 
-
-    /* case OP_SHFT: going to implement exponentiation first
-        /* Check or read immediate range (error in first pass
-		   prevents execution of second, so never fails). */
-	    /*(void)read_val (o3, &val, 5);
-
-        if (val == 1) { // 1 indicates right shift
-
-        }
-
-        else if (val == 0) { // 0 indicates left shift
-        // SHFT R1, R2, 0; means left shift R1 by R2 aka R1 = R1 << R2
-        // so R1 = R1 * (2**R2)
-
-        }
-
-        else {} // there is no else that would be an error
-        break; */ 
-
     case OP_EXP: // must be posivite, no negative exponents allowed!
         // EXP R1, R2, #3 means R1 = R2 ** #3
-        ;
-        int temp_r3 = 0;
+        
         if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
 		   prevents execution of second, so never fails). */
@@ -1034,6 +980,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	    if (operands == O_I) {
             printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	        (void)read_val (o1, &val, 9); // see the issue here and with all offsets is that we're messing with them by adding tons of code!!! no longer 1:1 mapping of assembler to machine code
+            num_errors++;
         }
 	    else /* O_L aka label */
 	        val = find_label (o1, 9);
@@ -1046,6 +993,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	    if (operands == O_I) {
             printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
 	        (void)read_val (o1, &val, 11);
+            num_errors++;
         }
 	    else /* O_L */
 	        val = find_label (o1, 11);
@@ -1055,11 +1003,16 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x4000 | (r1 << 6));
 	    break;
 	case OP_LD:
-        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
-	    write_value (0x2000 | (r1 << 9) | (val & 0x1FF));
+        if (operands == O_RI) {
+            printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
+            num_errors++;
+        }	    write_value (0x2000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_LDI:
-        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
+        if (operands == O_RI) {
+            printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
+            num_errors++;
+        }
 	    write_value (0xA000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_LDR:
@@ -1067,14 +1020,17 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x6000 | (r1 << 9) | (r2 << 6) | (val & 0x3F));
 	    break;
 	case OP_LEA:
-        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
+        if (operands == O_RI) {
+            printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
+            num_errors++;
+        }
 	    write_value (0xE000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_NOT:
 	    write_value (0x903F | (r1 << 9) | (r2 << 6));
 	    break;
     
-    case OP_RAND: // needs to be RR: R1 = destR, R2 = modulus {linear cong. generator}
+    case OP_RAND: // needs to be RR: R1 = destR {linear cong. generator}
         // need hardcoded large prime number to multiply seed
         // need hardcoded large constant to add to multiplied seed
         
@@ -1094,14 +1050,16 @@ generate_instruction (operands_t operands, const char* opstr)
 
         write_value(0x0000); // .blkw
         write_value(0x0000); // .blkw
+
         // .FILL prime num
         // write_value(0x7D03); // coprime with modulus
         write_value(0x003); // use a tiny prime for now for ease of visual testing
+
         // .FILL const num
         write_value(0x0444); // constant to add to seed, smaller than modulus
 
-        // .FILL x5000 - address to find the seed
-        write_value(0x5000);
+        // .FILL x5000 - address of the seed
+        write_value(0xFDFF);
 
         write_value(0x7FC3); // modulus
 
@@ -1153,11 +1111,17 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x8000);
 	    break;
 	case OP_ST:
-        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
+        if (operands == O_RI) {
+            printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
+            num_errors++;
+        }
 	    write_value (0x3000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STI:
-        printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
+        if (operands == O_RI) {
+            printf("Warning: immediate offsets are not compatible with LC3++. We suggest using labels instead.\n");
+            num_errors++;
+        }
 	    write_value (0xB000 | (r1 << 9) | (val & 0x1FF));
 	    break;
 	case OP_STR:
