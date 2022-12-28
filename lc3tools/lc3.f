@@ -824,12 +824,6 @@ generate_instruction (operands_t operands, const char* opstr)
 	    break;
 
     case OP_MLT:
-
-        //ADD R2, R2, #0 - this is an optimization for case of R2 == 0 ; if i make this change it will effect exp and rand also
-        //write_value (0x1020 | (r2 << 9) | (r2 << 6) | (0x00 & 0x1F)); // add temp_r2, temp_r2, #val
-        // BRz to the end so nothing happens when the operand is zero
-
-
         // no matter what, we will use three registers for simplicity of code/readability
         // we need two temporary registers: r2, r3, and one to keep track of negativeness
         
@@ -855,10 +849,11 @@ generate_instruction (operands_t operands, const char* opstr)
             }
         }
 
-        // save contents of those three temp registers - should abstract these lines into a method since they will be reused often
+        // save contents of those three temp registers
         write_value (0x3000 | (temp_r1 << 9) | 0x002); // save temp_r1 to three lines later
         write_value (0x3000 | (temp_r2 << 9) | 0x002); // save temp_r2 to three lines later
-        write_value (0x0E00 | 0x002); // BRnzp three lines so the saved lines don't execute
+        inst.ccode = (CC_N | CC_Z | CC_P);
+        write_value (inst.ccode | 0x002); // BRnzp three lines so the saved lines don't execute 
         write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
         write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r2 here
 
@@ -991,9 +986,7 @@ generate_instruction (operands_t operands, const char* opstr)
 
         break;
     case OP_RAND: // needs to be RR: R1 = destR, R2 = seed {linear cong. generator}
-        // seed need to be less than modulus - if it's too big, use the difference?
-        // need hardcoded large prime number to multiply seed
-        // need hardcoded large constant to add to multiplied seed
+        // works for R1 == R1 and R1 != R1
         
         while ((temp_r1 == r1) || (temp_r1 == r2)) {
             temp_r1++;
@@ -1093,13 +1086,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	    	/* Check or read immediate range (error in first pass
 		   prevents execution of second, so never fails). */
 	        (void)read_val (o3, &val, 5);
-
             write_value (0x1020 | (r1 << 9) | (r2 << 6) | ((val*-1) & 0x1F)); 
-            // 1. not: 
-            // need to clear a register, put the imm5 val in, then not it - how can i make sure that the register isn't used for anythign else?
-            //write_value (0x903F | (r1 << 9) | (r2 << 6));
-
-		    //write_value (0x1020 | (r1 << 9) | (r2 << 6) | (val & 0x1F));
 	    } else {
             // abstracted to method for reuse in other cases
             internal_subtract(r1, r2, r3);
@@ -1237,10 +1224,12 @@ internal_multiply(int r1, int temp_r1, int temp_r2) {
     write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x00 & 0x1F)); // ADD temp_r2, temp_r2, #0
 
     // BRz past the loop if temp_r2 is zero, since this means the answer is just zero
-    write_value (0x0400 | (0x008));
+    inst.ccode = CC_Z;
+    write_value (inst.ccode | 0x008);
 
     // BRp #4 to skip negating if not needed
-    write_value (0x0200 | (0x004));
+    inst.ccode = CC_P;
+    write_value (inst.ccode | (0x004));
     
     // negate temp_r2 so we can do mult properly
     write_value (0x903F | (temp_r2 << 9) | (temp_r2 << 6)); // not sr2, sr2
@@ -1256,19 +1245,18 @@ internal_multiply(int r1, int temp_r1, int temp_r2) {
     write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x1F & 0x1F));
 
     // BR positive to top of loop
-    write_value (0x0300 | (0xFFD & 0x1FF));
-
-    // restore all temp registers - this should be done by the caller fxn
-
+    //write_value (0x0300 | (0xFFD & 0x1FF));
+    inst.ccode = CC_P;
+    write_value (inst.ccode | (0xFFD & 0x1FF)); // i think this works
 }
 
 static void
 internal_subtract(int r1, int r2, int r3) {
-    if (r1 == r2 && r2 == r3) { // this case works
+    if (r1 == r2 && r2 == r3) {
         // rst r1
         write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
     }
-    else if (r1 != r2) { // maybe abstract this to a fxn? why bother repeating in the next else - not worth the overhead
+    else if (r1 != r2) {
         // r1 = -r3
         write_value (0x903F | (r1 << 9) | (r3 << 6));
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
