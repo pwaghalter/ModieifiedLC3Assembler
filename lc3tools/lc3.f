@@ -902,17 +902,25 @@ generate_instruction (operands_t operands, const char* opstr)
         // 1. subtract
         internal_subtract(temp_r1, r1, r2);
 
+        // if not zero, not equal so don't branch
+        inst.ccode = (CC_N | CC_P);
+        write_value(inst.ccode | 0x00)
         // if zero, r1 == r2 so branch to specified location
+        // first, restore temp registers
+        write_value (0x2000 | (temp_r1 << 9) | (0xFF6 & 0x1FF));
+        write_value (0x2000 | (temp_r2 << 9) | (0xFF6 & 0x1FF));
+
         inst.ccode = CC_Z;
 
         if (operands == O_RRI) {
             // read val and jump that many spots
-            write_value (inst.ccode | (val & 0x1FF));
+            write_value (inst.ccode | (val & 0x1FF)); // this won't work bc there will need to be lines afterwards to restore the registers if not eql, so that throws off where to jump to.
         }
         else {
             write_value (0x4000 | (r3 << 6)); //JSRR R3
         }
         break;
+
     case OP_MOV:
 	    write_value (0x6000 | (r2 << 9) | (r2 << 6) | (0 & 0x3F));
         write_value (0x7000 | (r2 << 9) | (r1 << 6) | (0 & 0x3F));
@@ -924,14 +932,25 @@ generate_instruction (operands_t operands, const char* opstr)
 
     case OP_OR: // P OR Q  = NOT (NOT(P) AND NOT(Q))
 
-        // locate a register not used in this op
-        while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
-            temp_r1++;
+        if (operands == O_RRI) {
+            // locate a register not used in this op
+            while (temp_r1 == r1 || temp_r1 == r2) {
+                temp_r1++;
+            }
+            // locate a register not used in this op
+            while (temp_r2 == r1 || temp_r2 == r2) {
+                temp_r2++;
+            }
         }
-
-        // locate a register not used in this op
-        while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3) {
-            temp_r2++;
+        else {
+            // locate a register not used in this op
+            while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
+                temp_r1++;
+            }
+            // locate a register not used in this op
+            while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3) {
+                temp_r2++;
+            }
         }
         
         // need to save 2 registers:
@@ -981,7 +1000,7 @@ generate_instruction (operands_t operands, const char* opstr)
             write_value (0x2000 | (temp_r2 << 9) | (0xFF7 & 0x1FF));
         }
         
-        // add 0 to r1 to set condition codes correctly - don't think this is needed
+        // add 0 to r1 to set condition codes correctly
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // ADD DestR, DestR, #1
 
         break;
