@@ -677,8 +677,8 @@ generate_instruction (operands_t operands, const char* opstr)
 
             if (val < 0) {
                 // print error message! how to accomplish this in the RRR case??
-                printf("Error: Negative exponents are not supported. Exponent is: %d.\n", val);
-                num_errors++;
+                printf("Warning: Negative exponents are not supported. Exponent is: %d.\n", val);
+                //num_errors++; - should prob do the same thing in both cases aka do nothing/no op
                 break;
             }
 
@@ -695,8 +695,10 @@ generate_instruction (operands_t operands, const char* opstr)
         }
         else {
             write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x00 & 0x1F)); // ADD r3, r3, #0
-            // if result of that is negative then skip to the end
-            write_value (0x0800 | 0x023); // BRn to the end.
+            // if result of that is negative then skip to the end - aka if there is a negative exponent
+            inst.ccode = CC_N;
+            //write_value (0x0800 | 0x023); // BRn to the end.
+            write_value (inst.ccode | 0x025);
 
             while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
                 temp_r1++;
@@ -741,13 +743,14 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x00 & 0x1F)); // ADD temp_r2, temp_r2, #0
         
         // if exp == 0, r1 = 1, BRz END - the CC will be set to this already from prev op
-        write_value (0x0400 | 0x012); // BRz to the end since the answer should be 1 - this is not going to the right place.
+        inst.ccode = CC_Z;
+        write_value (inst.ccode | 0x014);
     
         write_value (0x1020 | (temp_r3 << 9) | (r1 << 6) | (0x00 & 0x1F)); // ADD temp_r3, r1, #0
         
         // save contents of temp_r1 so it can be restored
         write_value (0x3000 | (temp_r1 << 9) | (0x001 & 0x1FF));
-        write_value (0x0E00 | 0x001); // BRnzp one lines so the saved line doesn't execute
+        write_value (0x0E00 | 0x001); // BRnzp one line so the saved line doesn't execute
         write_value (0x0000); // .blkw
                 
         // r1 = temp_r3 * temp_r1
@@ -763,10 +766,16 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x0A00 | (0xFEC & 0x1FF)); // BRnp to multiply again
 
         // restore temp_r1, temp_r2, temp_r3 - shouldn't this need to be a diff case if RRI?
-        write_value (0x2000 | (temp_r1 << 9) | (0xFE2 & 0x1FF));
-        write_value (0x2000 | (temp_r2 << 9) | (0xFE2 & 0x1FF));
-        write_value (0x2000 | (temp_r3 << 9) | (0xFE2 & 0x1FF));
-        
+        if (operands == O_RRI) {
+            write_value (0x2000 | (temp_r1 << 9) | (0xFE0 & 0x1FF));
+            write_value (0x2000 | (temp_r2 << 9) | (0xFE0 & 0x1FF));
+            write_value (0x2000 | (temp_r3 << 9) | (0xFE0 & 0x1FF));
+        }
+        else {
+            write_value (0x2000 | (temp_r1 << 9) | (0xFE2 & 0x1FF));
+            write_value (0x2000 | (temp_r2 << 9) | (0xFE2 & 0x1FF));
+            write_value (0x2000 | (temp_r3 << 9) | (0xFE2 & 0x1FF));
+        }
         // reset condition codes
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // ADD r1, r1, #0
 
