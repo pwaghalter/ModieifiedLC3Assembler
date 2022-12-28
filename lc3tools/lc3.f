@@ -128,7 +128,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x004, /* MOV: RR format only          */
     0x004, /* NOT: RR format only          */
     0x003, /* OR: RRR or RRI formats only  */
-    0x020, /* RAND: R format only          */
+    0x004, /* RAND: RR format only          */
     0x020, /* RST: R format only           */
     0x200, /* RTI: no operands allowed     */
     0x018, /* ST: RI or RL formats only    */
@@ -199,6 +199,7 @@ static void unterminated_string ();
 static void bad_line ();
 static void line_ignored ();
 static void parse_ccode (const char*);
+static void internal_subtract(int, int, int);
 static void internal_multiply(int, int, int);
 static void generate_instruction (operands_t, const char*);
 static void found_label (const char* lname);
@@ -890,30 +891,31 @@ generate_instruction (operands_t operands, const char* opstr)
 
 
     case OP_EQL: // need to either skip the one not executing or else idk maybe use real C if statements
+        
+        // this does not work because you cannot restore the temp register since you will branch away! let's just stick with MOV.
         if (operands == O_RRI) {
-            /* Check or read immediate range (error in first pass
-		   prevents execution of second, so never fails). */
-	        (void)read_val (o3, &val, 5);
-        } else { // RRR addressing
-            // 1. subtract
-            write_value (0x903F | (r3 << 9) | (r3 << 6));
-            //printf("r1 %d\n", r1*-1);
-            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
-		    write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
+            while (temp_r1 == r1 || temp_r1 == r2) {
+                temp_r1++;
+            }
+        }
+        else{
+            while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
+                temp_r1++;
+            }
+        }
+        
+        // 1. subtract
+        internal_subtract(temp_r1, r1, r2);
 
-            // BRz skip two instruction - maybe instead just do a C ifs statement and eihter clear r1 or set = 1?
-            write_value (0x0A01);// | (0x001 & 0x1FF));
+        // if zero, r1 == r2 so branch to specified location
+        inst.ccode = CC_Z;
 
-            // if ans was neg or pos then skip to here and store 1 in dest R
-            write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
-            write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F)); // & 0x1F gets the last five bits in the instr
-            // 2. if zero, then they are equal and put 1 in dest R
-            // clear R1 - can't just do this at start in case one of the operands is the dest register bc then we'd be clearing it
-            write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
-
-
-            // 3. if not zero, then they are not equal and put 0 in dest R
-            // doing these loads will set CC so if they're eq it'll be 1 and if not it'll be zero - akin to return codes
+        if (operands == O_RRI) {
+            // read val and jump that many spots
+            write_value (inst.ccode | (val & 0x1FF));
+        }
+        else {
+            write_value (0x4000 | (r3 << 6)); //JSRR R3
         }
         break;
     case OP_MOV:
@@ -988,15 +990,16 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // ADD DestR, DestR, #1
 
         break;
-    case OP_RAND: // needs to be RR: R1 = destR {linear cong. generator}
+    case OP_RAND: // needs to be RR: R1 = destR, R2 = seed {linear cong. generator}
+        // seed need to be less than modulus - if it's too big, use the difference?
         // need hardcoded large prime number to multiply seed
         // need hardcoded large constant to add to multiplied seed
         
-        while (temp_r1 == r1) {
+        while ((temp_r1 == r1) || (temp_r1 == r2)) {
             temp_r1++;
         }
 
-        while ((temp_r2 == r1) | (temp_r2 == temp_r1)) {
+        while ((temp_r2 == r1) | (temp_r2 == r2) | (temp_r2 == temp_r1)) {
             temp_r2++;
         }
 
@@ -1004,60 +1007,58 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x3000 | (temp_r1 << 9) | 0x002); // save temp_r1 to two lines later
         write_value (0x3000 | (temp_r2 << 9) | 0x002); // save temp_r2 to two lines later
 
-        write_value (0x0E00 | (0x006)); // BRnzp #6
+        write_value (0x0E00 | (0x005)); // BRnzp #5
 
         write_value(0x0000); // .blkw
         write_value(0x0000); // .blkw
 
         // .FILL prime num
-        // write_value(0x7D03); // coprime with modulus
-        write_value(0x003); // use a tiny prime for now for ease of visual testing
+        write_value(0x7D03); // coprime with modulus
+        //write_value(0x003); // use a tiny prime for now for ease of visual testing
 
         // .FILL const num
         write_value(0x0444); // constant to add to seed, smaller than modulus
 
-        // .FILL x5000 - address of the seed
-        write_value(0xFDFF);
-
         write_value(0x7FC3); // modulus
 
-        // SEED
-        // try loading from xFDFF - if nothing is there, use x1234 as the seed.
-        // at the end of this, store the result in xFDFF and it will become the next seed
-        write_value (0xA000 | (temp_r1 << 9) | (0xFFD & 0x1FF)); // LDI temp_r1, FFD
-        write_value (0x1020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x00 & 0x1F));
-        
-        // BRnp #1, else to fill it with 0x00FF
-        write_value ((0x0A00) | (0x001 & 0x1FF));
-        
-        // ADD R0, R0, #15
-        write_value (0x1020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x0F & 0x1F));
+        // LD temp_r2, modulus
+        write_value (0x2000 | (temp_r2 << 9) | (0xFFE & 0x1FF));
 
-        // LD temp_r, prime_num
-        write_value (0x2000 | (temp_r2 << 9) | (0xFF7 & 0x1FF));
+        // temp_r1 = seed
+        write_value (0x5020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x00 & 0x1F)); // clear temp_r2
+        write_value (0x1000 | (temp_r1 << 9) | (temp_r1 << 6) | (r2));
 
-        // write_value (0x2000 | (r1 << 9) | (val & 0x1FF));
+        // Subtract temp_r1 = modulus - seed. If result is negative, negate result and use that as the seed.
+        internal_subtract(temp_r1, temp_r2, temp_r1);
+
+        inst.ccode = (CC_P | CC_Z); // if modulus - seed >= 0, valid seed, don't negate
+        write_value (inst.ccode | (0x002 & 0x1FF));
+
+        // negate temp_r1 - this will be the new seed, now we know for sure seed < modulus
+        write_value (0x903F | (temp_r1 << 9) | (temp_r1 << 6));
+        write_value (0x1020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x01 & 0x1F));
+
+        // LD temp_r2, prime_num
+        write_value (0x2000 | (temp_r2 << 9) | (0xFF3 & 0x1FF));
+
         // ans = seed * prime_num
         internal_multiply(r1, temp_r1, temp_r2);
 
         // LD temp_r2, const_num
-        write_value (0x2000 | (temp_r2 << 9) | (0xFEC & 0x1FF));
+        write_value (0x2000 | (temp_r2 << 9) | (0xFE6 & 0x1FF));
 
         // ans = ans + const
         write_value (0x1000 | (r1 << 9) | (r1 << 6) | (temp_r2));
 
         // LD temp_r2, modulus
-        write_value (0x2000 | (temp_r2 << 9) | (0xFEC & 0x1FF));
+        write_value (0x2000 | (temp_r2 << 9) | (0xFE5 & 0x1FF));
 
         // ans = ans & modulus
         write_value (0x5000 | (r1 << 9) | (r1 << 6) | temp_r2);
 
-        // save the new 'random' number as the seed for next time
-        write_value (0xB000 | (r1 << 9) | (0xFE9 & 0x1FF)); // STI R0, x5000
-
         // restore temp registers
-        write_value (0x2000 | (temp_r1 << 9) | (0xFE2 & 0x1FF));
-        write_value (0x2000 | (temp_r2 << 9) | (0xFE2 & 0x1FF));
+        write_value (0x2000 | (temp_r1 << 9) | (0xFDF & 0x1FF));
+        write_value (0x2000 | (temp_r2 << 9) | (0xFDF & 0x1FF));
         break;
 
     case OP_RST:
@@ -1100,32 +1101,8 @@ generate_instruction (operands_t operands, const char* opstr)
 
 		    //write_value (0x1020 | (r1 << 9) | (r2 << 6) | (val & 0x1F));
 	    } else {
-
-            if (r1 == r2 && r2 == r3) { // this case works
-                // rst r1
-                write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
-            }
-            else if (r1 != r2) { // maybe abstract this to a fxn? why bother repeating in the next else
-                // r1 = -r3
-                write_value (0x903F | (r1 << 9) | (r3 << 6));
-                write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-
-                // r1 = r1 + r2
-                 write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
-            }
-
-            else { // r1 == r2
-                // r1 = -r2
-                write_value (0x903F | (r1 << 9) | (r2 << 6));
-                write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-
-                // r1 = r1 + r3
-                write_value (0x1000 | (r1 << 9) | (r1 << 6) | r3);
-                
-                // r1 = -r1
-                write_value (0x903F | (r1 << 9) | (r1 << 6));
-                write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-            }
+            // abstracted to method for reuse in other cases
+            internal_subtract(r1, r2, r3);
         }
         break;
 	case OP_TRAP:
@@ -1283,4 +1260,33 @@ internal_multiply(int r1, int temp_r1, int temp_r2) {
 
     // restore all temp registers - this should be done by the caller fxn
 
+}
+
+static void
+internal_subtract(int r1, int r2, int r3) {
+    if (r1 == r2 && r2 == r3) { // this case works
+        // rst r1
+        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
+    }
+    else if (r1 != r2) { // maybe abstract this to a fxn? why bother repeating in the next else - not worth the overhead
+        // r1 = -r3
+        write_value (0x903F | (r1 << 9) | (r3 << 6));
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+
+        // r1 = r1 + r2
+        write_value (0x1000 | (r1 << 9) | (r1 << 6) | r2);
+    }
+
+    else { // r1 == r2
+        // r1 = -r2
+        write_value (0x903F | (r1 << 9) | (r2 << 6));
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+
+        // r1 = r1 + r3
+        write_value (0x1000 | (r1 << 9) | (r1 << 6) | r3);
+                
+        // r1 = -r1
+        write_value (0x903F | (r1 << 9) | (r1 << 6));
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
+    }
 }
