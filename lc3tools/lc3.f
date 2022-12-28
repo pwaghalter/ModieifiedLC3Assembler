@@ -899,26 +899,43 @@ generate_instruction (operands_t operands, const char* opstr)
             }
         }
         
+        // save temp registers
+        write_value (0x3000 | (temp_r1 << 9) | 0x001); // save temp_r1 to three lines later
+        inst.ccode = (CC_N | CC_Z | CC_P);
+        write_value (inst.ccode | 0x001); // BRnzp three lines so the saved lines don't execute 
+        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
+        
         // 1. subtract
         internal_subtract(temp_r1, r1, r2);
 
-        // if not zero, not equal so don't branch
+        // if not zero, not equal so don't branch, go straight to restoring registers
         inst.ccode = (CC_N | CC_P);
-        write_value(inst.ccode | 0x00)
+        write_value(inst.ccode | 0x05);
+
         // if zero, r1 == r2 so branch to specified location
-        // first, restore temp registers
-        write_value (0x2000 | (temp_r1 << 9) | (0xFF6 & 0x1FF));
-        write_value (0x2000 | (temp_r2 << 9) | (0xFF6 & 0x1FF));
-
-        inst.ccode = CC_Z;
-
+        // first, restore temp register
+        write_value (0x2000 | (temp_r1 << 9) | (0xFFA & 0x1FF));
+        
+        int r7 = 7;
         if (operands == O_RRI) {
+            // save PC in R7 for linkage
+            inst.ccode = (CC_N | CC_P | CC_Z); // unconditionally jump
+            write_value (inst.ccode | 0x001); // BRnzp three lines so the saved lines don't execute 
+            write_value ((code_loc + 3)); // store the current pc + 2 (don't want to return to an unconditional jump)
+            write_value (0x2000 | (r7 << 9) | (0xFFE & 0x1FF)); 
+
             // read val and jump that many spots
-            write_value (inst.ccode | (val & 0x1FF)); // this won't work bc there will need to be lines afterwards to restore the registers if not eql, so that throws off where to jump to.
+            write_value (inst.ccode | ((val + 3) & 0x1FF)); // this won't work bc there will need to be lines afterwards to restore the registers if not eql, so that throws off where to jump to.
+            write_value (inst.ccode | 0x01); // if/when return from subroutine, don't try restoring the temp register again
         }
         else {
             write_value (0x4000 | (r3 << 6)); //JSRR R3
+            write_value (inst.ccode | 0x01); // if/when return from subroutine, don't try restoring the temp register again
         }
+
+        // restore temp register
+        write_value (0x2000 | (temp_r1 << 9) | (0xFF8 & 0x1FF));
+
         break;
 
     case OP_MOV:
