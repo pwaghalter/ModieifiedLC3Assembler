@@ -48,6 +48,7 @@ part of the label?  Currently I allow only alpha followed by alphanum and _.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include "symbol.h"
 
@@ -669,8 +670,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (inst.ccode | (val & 0x1FF));
 	    break;
     case OP_EXP: // must be posivite, no negative exponents allowed!
-        // EXP R1, R2, #3 means R1 = R2 ** #3
-        
+
         if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
 		   prevents execution of second, so never fails). */
@@ -679,11 +679,10 @@ generate_instruction (operands_t operands, const char* opstr)
             if (val < 0) {
                 // print error message! how to accomplish this in the RRR case??
                 printf("Warning: Negative exponents are not supported. Exponent is: %d.\n", val);
-                //num_errors++; - should prob do the same thing in both cases aka do nothing/no op
                 break;
             }
 
-            // find three temporary registers
+            // find temporary registers
             while (temp_r1 == r1 || temp_r1 == r2) {
                 temp_r1++;
             }
@@ -695,12 +694,12 @@ generate_instruction (operands_t operands, const char* opstr)
             }
         }
         else {
-            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x00 & 0x1F)); // ADD r3, r3, #0
-            // if result of that is negative then skip to the end - aka if there is a negative exponent
+            // if there is a negative exponent, no-op
+            write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x00 & 0x1F));
             inst.ccode = CC_N;
-            //write_value (0x0800 | 0x023); // BRn to the end.
-            write_value (inst.ccode | 0x025);
+            write_value (inst.ccode | 0x025); // BRn to the end.
 
+            // locate temporary registers
             while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
                 temp_r1++;
             }
@@ -712,15 +711,14 @@ generate_instruction (operands_t operands, const char* opstr)
             }
         }
 
-        // save contents of those three temp registers - should abstract these lines into a method since they will be reused often
-        write_value (0x3000 | (temp_r1 << 9) | 0x003); // save temp_r1 to three lines later
-        write_value (0x3000 | (temp_r2 << 9) | 0x003); // save temp_r2 to three lines later
-        write_value (0x3000 | (temp_r3 << 9) | 0x003); // save temp_r2 to three lines later
-
-        write_value (0x0E00 | 0x003); // BRnzp three lines so the saved lines don't execute
-        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
-        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r2 here
-        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r3 here
+        // save contents of those three temp registers - should abstract these lines into a method since they will be reused often?
+        write_value (0x3000 | (temp_r1 << 9) | 0x003);
+        write_value (0x3000 | (temp_r2 << 9) | 0x003);
+        write_value (0x3000 | (temp_r3 << 9) | 0x003); 
+        write_value (0x0E00 | 0x003);
+        write_value (0x0000);
+        write_value (0x0000);
+        write_value (0x0000);
 
         // set temp_r1 = r2
         // set temp_r2 = r3 or val
@@ -764,9 +762,9 @@ generate_instruction (operands_t operands, const char* opstr)
         write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0xFF & 0x1F)); // ADD temp_r3, r3, #-1
 
         // if zero, then we're done. If not, multiply again
-        write_value (0x0A00 | (0xFEC & 0x1FF)); // BRnp to multiply again
+        write_value (0x0A00 | (0xFEC & 0x1FF));
 
-        // restore temp_r1, temp_r2, temp_r3 - shouldn't this need to be a diff case if RRI?
+        // restore temp registers
         if (operands == O_RRI) {
             write_value (0x2000 | (temp_r1 << 9) | (0xFE0 & 0x1FF));
             write_value (0x2000 | (temp_r2 << 9) | (0xFE0 & 0x1FF));
@@ -777,9 +775,9 @@ generate_instruction (operands_t operands, const char* opstr)
             write_value (0x2000 | (temp_r2 << 9) | (0xFE2 & 0x1FF));
             write_value (0x2000 | (temp_r3 << 9) | (0xFE2 & 0x1FF));
         }
-        // reset condition codes
-        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // ADD r1, r1, #0
 
+        // reset condition codes
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));       
         break;
 
 	case OP_JMP:
@@ -825,9 +823,9 @@ generate_instruction (operands_t operands, const char* opstr)
 
     case OP_MLT:
         // no matter what, we will use three registers for simplicity of code/readability
-        // we need two temporary registers: r2, r3, and one to keep track of negativeness
+        // we need two temporary registers: r2, r3
         
-        // find three temporary registers
+        // find two temporary registers
         if (operands == O_RRI) {
             /* Check or read immediate range (error in first pass
 		    prevents execution of second, so never fails). */
@@ -849,16 +847,16 @@ generate_instruction (operands_t operands, const char* opstr)
             }
         }
 
-        // save contents of those three temp registers
-        write_value (0x3000 | (temp_r1 << 9) | 0x002); // save temp_r1 to three lines later
-        write_value (0x3000 | (temp_r2 << 9) | 0x002); // save temp_r2 to three lines later
+        // save contents of temp registers
+        write_value (0x3000 | (temp_r1 << 9) | 0x002);
+        write_value (0x3000 | (temp_r2 << 9) | 0x002);
         inst.ccode = (CC_N | CC_Z | CC_P);
-        write_value (inst.ccode | 0x002); // BRnzp three lines so the saved lines don't execute 
-        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
-        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r2 here
+        write_value (inst.ccode | 0x002);
+        write_value (0x0000);
+        write_value (0x0000);
 
+        // load temp registers with operands
         write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); // ADD temp_r1, r2, #0
-
         if (operands == O_RRI) {
             write_value (0x5020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x00 & 0x1F)); // clear temp_r2
             write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (val & 0x1F)); // add temp_r2, temp_r2, #val
@@ -870,25 +868,23 @@ generate_instruction (operands_t operands, const char* opstr)
         // business logic abstracted to a method for reuse in other ops
         internal_multiply(r1, temp_r1, temp_r2);
 
-        // restore all temp registers
+        // restore temp registers
         if (operands == O_RRI) {
-            write_value (0x2000 | (temp_r1 << 9) | (0xFED & 0x1FF)); // LD temp_r1
-            write_value (0x2000 | (temp_r2 << 9) | (0xFED & 0x1FF)); // LD temp_r2
+            write_value (0x2000 | (temp_r1 << 9) | (0xFED & 0x1FF));
+            write_value (0x2000 | (temp_r2 << 9) | (0xFED & 0x1FF));
         }
         else {
-            write_value (0x2000 | (temp_r1 << 9) | (0xFEE & 0x1FF)); // LD temp_r1
-            write_value (0x2000 | (temp_r2 << 9) | (0xFEE & 0x1FF)); // LD temp_r2
+            write_value (0x2000 | (temp_r1 << 9) | (0xFEE & 0x1FF));
+            write_value (0x2000 | (temp_r2 << 9) | (0xFEE & 0x1FF));
         }
 
-        // ADD r1, r1, #0 to restore condition codes
+        //restore condition codes
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
         break; 
 
 
-    case OP_EQL: // need to either skip the one not executing or else idk maybe use real C if statements
-        
-        // this does not work because you cannot restore the temp register since you will branch away! let's just stick with MOV.
-        if (operands == O_RRI) {
+    case OP_EQL: // need to either skip the one not executing or else idk maybe use real C if statements        
+        /*if (operands == O_RRI) {
             while (temp_r1 == r1 || temp_r1 == r2) {
                 temp_r1++;
             }
@@ -916,9 +912,9 @@ generate_instruction (operands_t operands, const char* opstr)
         // first, restore temp register
         write_value (0x2000 | (temp_r1 << 9) | (0xFFA & 0x1FF));
         
-        int r7 = 7;
         if (operands == O_RRI) {
             // save PC in R7 for linkage
+            int r7 = 7;
             inst.ccode = (CC_N | CC_P | CC_Z); // unconditionally jump
             write_value (inst.ccode | 0x001); // BRnzp three lines so the saved lines don't execute 
             write_value ((code_loc + 3)); // store the current pc + 2 (don't want to return to an unconditional jump)
@@ -934,7 +930,29 @@ generate_instruction (operands_t operands, const char* opstr)
         }
 
         // restore temp register
-        write_value (0x2000 | (temp_r1 << 9) | (0xFF8 & 0x1FF));
+        write_value (0x2000 | (temp_r1 << 9) | (0xFF7 & 0x1FF));*/
+        ;
+
+        write_value (0x3000 | (0 << 9) | 0x001); // save R0 to one line later
+        inst.ccode = (CC_N | CC_Z | CC_P);
+        write_value (inst.ccode | 0x001); // BRnzp three lines so the saved lines don't execute 
+        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
+
+        int store_spot = 0x1E; // #30
+        for (int i=0x00; i<0x0A; i++) {
+            write_value (0xF023);
+            write_value (0x1020 | (0 << 9) | (0 << 6) | (0x04 & 0x1F)); // ADD shift to R0
+            write_value (0x3000 | (0 << 9) | (store_spot - 0x011 + i)); // ST R0 to just after code in mem
+            printf("%d\n", store_spot - 3 + i);
+        }
+
+        for (int i=0; i<10; i++) {
+            write_value(0x000);
+        }
+
+        write_value (0xE000 | (0 << 9) | (0xFF5 & 0x1FF)); // LEA R0, #1
+        write_value (0xF024); // write the string to the console
+        
 
         break;
 
@@ -947,54 +965,48 @@ generate_instruction (operands_t operands, const char* opstr)
 	    break;
     
 
-    case OP_OR: // P OR Q  = NOT (NOT(P) AND NOT(Q))
-
+    case OP_OR:
+        // locate temp registers
         if (operands == O_RRI) {
-            // locate a register not used in this op
             while (temp_r1 == r1 || temp_r1 == r2) {
                 temp_r1++;
             }
-            // locate a register not used in this op
             while (temp_r2 == r1 || temp_r2 == r2) {
                 temp_r2++;
             }
         }
         else {
-            // locate a register not used in this op
             while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
                 temp_r1++;
             }
-            // locate a register not used in this op
             while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3) {
                 temp_r2++;
             }
         }
         
-        // need to save 2 registers:
+        // save temp registers
+        write_value (0x3000 | (temp_r1 << 9) | 0x002);
+        write_value (0x3000 | (temp_r2 << 9) | 0x002);
+        inst.ccode = (CC_N | CC_Z | CC_P);
+        write_value (inst.ccode | (0x002));
+        write_value (0x0000);
+        write_value (0x0000);
 
-        write_value (0x3000 | (temp_r1 << 9) | 0x002); // save temp_r1 to three lines later
-        write_value (0x3000 | (temp_r2 << 9) | 0x002); // save temp_r2 to three lines later
-        write_value (0x0E00 | (0x002)); // BRnzp two lines so the saved lines don't execute
-        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
-        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r2 here
-
+        // set temp registers
         write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
         
-
-        // get value for temp_r2
         if (operands == O_RRI) {
             /* Check or read immediate range (error in first pass
 		    prevents execution of second, so never fails). */
 	        (void)read_val (o3, &val, 5);
 
-            // clear temp_r2
             write_value (0x5020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x0 & 0x1F)); // AND temp_r2, temp_r2, #0
-
             write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (val & 0x1F)); //ADD temp_r2, temp_r2, val
         }
         else {
             write_value (0x1020 | (temp_r2 << 9) | (r3 << 6) | (0x00 & 0x1F)); //ADD temp_r, r3, #0
         }
+
         // P = NOT P
 	    write_value (0x903F | (temp_r1 << 9) | (temp_r1 << 6));
 
@@ -1007,7 +1019,7 @@ generate_instruction (operands_t operands, const char* opstr)
         // DestR = NOT DestR
         write_value (0x903F | (r1 << 9) | (r1 << 6));
 
-        // restore temp_r1 and temp_r2
+        // restore temp registers
         if (operands == O_RRI) {
             write_value (0x2000 | (temp_r1 << 9) | (0xFF6 & 0x1FF));
             write_value (0x2000 | (temp_r2 << 9) | (0xFF6 & 0x1FF));
@@ -1017,14 +1029,19 @@ generate_instruction (operands_t operands, const char* opstr)
             write_value (0x2000 | (temp_r2 << 9) | (0xFF7 & 0x1FF));
         }
         
-        // add 0 to r1 to set condition codes correctly
+        // reset condition codes
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // ADD DestR, DestR, #1
 
         break;
+
     case OP_RAND: // needs to be RR: R1 = destR, R2 = seed {linear cong. generator}
         // works for R1 == R1 and R1 != R1
-        
-        while ((temp_r1 == r1) || (temp_r1 == r2)) {
+        srand(time(NULL));
+        int r = rand();
+        write_value(r);
+        write_value (0x2000 | (r1 << 9) | (0xFFE & 0x1FF));
+
+        /*while ((temp_r1 == r1) || (temp_r1 == r2)) {
             temp_r1++;
         }
 
@@ -1087,7 +1104,7 @@ generate_instruction (operands_t operands, const char* opstr)
 
         // restore temp registers
         write_value (0x2000 | (temp_r1 << 9) | (0xFDF & 0x1FF));
-        write_value (0x2000 | (temp_r2 << 9) | (0xFDF & 0x1FF));
+        write_value (0x2000 | (temp_r2 << 9) | (0xFDF & 0x1FF));*/
         break;
 
     case OP_RST:
@@ -1234,14 +1251,6 @@ found_label (const char* lname)
     }
 
     free (local);
-}
-
-int get_temp_r(int r1, int r2, int r3) {
-    int temp_r = 0;
-    while (temp_r == r1 || temp_r == r2 || temp_r == r3) {
-        temp_r++;
-    }
-    return temp_r;
 }
 
 static void
