@@ -505,7 +505,7 @@ read_val (const char* s, int* vptr, int bits) // vptr == val pointer aka points 
 }
 
 static void
-write_value (int val) // write the instruction and increment code pointer
+write_value (int val)
 {
     unsigned char out[2];
 
@@ -684,6 +684,7 @@ generate_instruction (operands_t operands, const char* opstr)
         for (int i=0; i<11; i++) {
             write_value(0x000);
         }
+        printf("%x\n", (shift & 0x1F));
         write_value (0xE000 | (0 << 9) | (0xFF4 & 0x1FF)); // LEA R0, #1
         write_value (0xF022); // write the string to the console
         write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // clear r1
@@ -718,7 +719,7 @@ generate_instruction (operands_t operands, const char* opstr)
             // if there is a negative exponent, no-op
             write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x00 & 0x1F));
             inst.ccode = CC_N;
-            write_value (inst.ccode | 0x025); // BRn to the end.
+            write_value (inst.ccode | 0x025); // BRn to the end
 
             // locate temporary registers
             while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
@@ -1076,7 +1077,6 @@ generate_instruction (operands_t operands, const char* opstr)
 	    write_value (0x7000 | (r1 << 9) | (r2 << 6) | (val & 0x3F));
 	    break;
     case OP_SUB:
-        
         if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
 		   prevents execution of second, so never fails). */
@@ -1239,7 +1239,7 @@ internal_multiply(int r1, int temp_r1, int temp_r2) {
 
 static void
 internal_subtract(int r1, int r2, int r3) {
-    if (r1 == r2 && r2 == r3) {
+    /*if (r1 == r2 && r2 == r3) {
         // rst r1
         write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x0 & 0x1F));
     }
@@ -1263,5 +1263,7 @@ internal_subtract(int r1, int r2, int r3) {
         // r1 = -r1
         write_value (0x903F | (r1 << 9) | (r1 << 6));
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x01 & 0x1F));
-    }
+        
+    }*/
+    #include "subtract_rrr.h"
 }

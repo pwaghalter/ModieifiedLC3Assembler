@@ -657,7 +657,7 @@ squash_symbols (int addr_s, int addr_e)
 
 
 static void 
-init_machine ()
+init_machine () // if want to make any hardcoded lc3 changes, this is where to do it
 {
     int os_start, os_end;
 

@@ -1,5 +1,6 @@
 .ORIG x3000
 
-EXP R0, R1, R3
-BRnzp #3
+;CYPH R1;
+SUB R1, R2, R3;
+HALT
 .END
