@@ -58,9 +58,9 @@ enum opcode_t {
     OP_NONE,
 
     /* real instruction opcodes */
-    OP_ADD, OP_AND, OP_BR, OP_EXP, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
-    OP_LEA, OP_MLT, OP_MOV, OP_NOT, OP_OR, OP_RAND, OP_RST, OP_RTI, OP_ST, OP_STI, 
-    OP_STR, OP_SUB, OP_TRAP, OP_EQL, OP_SHFT,
+    OP_ADD, OP_AND, OP_BR, OP_CYPH, OP_EXP, OP_JMP, OP_JSR, OP_JSRR, OP_LD, OP_LDI, OP_LDR,
+    OP_LEA, OP_MLT, OP_NOT, OP_OR, OP_RAND, OP_RST, OP_RTI, OP_ST, OP_STI, 
+    OP_STR, OP_SUB, OP_TRAP,
 
     /* trap pseudo-ops */
     OP_GETC, OP_HALT, OP_IN, OP_OUT, OP_PUTS, OP_PUTSP,
@@ -79,8 +79,8 @@ static const char* const opnames[NUM_OPS] = {
     "missing opcode",
 
     /* real instruction opcodes */
-    "ADD", "AND", "BR", "EXP", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA", "MLT", "MOV",
-    "NOT", "OR", "RAND", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP", "EQL", "SHFT",
+    "ADD", "AND", "BR", "CYPH", "EXP", "JMP", "JSR", "JSRR", "LD", "LDI", "LDR", "LEA", "MLT",
+    "NOT", "OR", "RAND", "RST", "RTI", "ST", "STI", "STR", "SUB", "TRAP",
 
     /* trap pseudo-ops */
     "GETC", "HALT", "IN", "OUT", "PUTS", "PUTSP",
@@ -117,6 +117,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x003, /* ADD: RRR or RRI formats only */
     0x003, /* AND: RRR or RRI formats only */
     0x0C0, /* BR: I or L formats only      */
+    0x020, /* CYPH: R format only          */
     0x003, /* EXP: RRR or RRI formats only */
     0x020, /* JMP: R format only           */
     0x0C0, /* JSR: I or L formats only     */
@@ -126,7 +127,6 @@ static const int op_format_ok[NUM_OPS] = {
     0x002, /* LDR: RRI format only         */
     0x018, /* LEA: RI or RL formats only   */
     0x003, /* MLT: RRR or RRI formats only */
-    0x004, /* MOV: RR format only          */
     0x004, /* NOT: RR format only          */
     0x003, /* OR: RRR or RRI formats only  */
     0x004, /* RAND: RR format only          */
@@ -137,8 +137,6 @@ static const int op_format_ok[NUM_OPS] = {
     0x002, /* STR: RRI format only         */
     0x003, /* SUB: RRR or RRI formats only */
     0x040, /* TRAP: I format only          */
-    0x003, /* EQL: RRR or RRI formats only */
-    0x002, /* SHFT: RRI format only        */
 
     /* trap pseudo-op formats (no operands) */
     0x200, /* GETC: no operands allowed    */
@@ -252,6 +250,7 @@ O_     {ENDLINE}
 ADD       {inst.op = OP_ADD;   BEGIN (ls_operands);}
 AND       {inst.op = OP_AND;   BEGIN (ls_operands);}
 BR{CCODE} {inst.op = OP_BR;    parse_ccode (yytext + 2); BEGIN (ls_operands);}
+CYPH      {inst.op = OP_CYPH;  BEGIN (ls_operands);}
 EXP       {inst.op = OP_EXP;   BEGIN (ls_operands);}
 JMP       {inst.op = OP_JMP;   BEGIN (ls_operands);}
 JSRR      {inst.op = OP_JSRR;  BEGIN (ls_operands);}
@@ -261,7 +260,6 @@ LDR       {inst.op = OP_LDR;   BEGIN (ls_operands);}
 LD        {inst.op = OP_LD;    BEGIN (ls_operands);}
 LEA       {inst.op = OP_LEA;   BEGIN (ls_operands);}
 MLT       {inst.op = OP_MLT;   BEGIN (ls_operands);}
-MOV       {inst.op = OP_MOV;   BEGIN (ls_operands);}
 NOT       {inst.op = OP_NOT;   BEGIN (ls_operands);}
 OR        {inst.op = OP_OR;    BEGIN (ls_operands);}
 RAND      {inst.op = OP_RAND;  BEGIN (ls_operands);}
@@ -272,8 +270,6 @@ STR       {inst.op = OP_STR;   BEGIN (ls_operands);}
 ST        {inst.op = OP_ST;    BEGIN (ls_operands);}
 SUB       {inst.op = OP_SUB;   BEGIN (ls_operands);}
 TRAP      {inst.op = OP_TRAP;  BEGIN (ls_operands);}
-EQL       {inst.op = OP_EQL;   BEGIN (ls_operands);}
-SHFT      {inst.op = OP_SHFT;  BEGIN (ls_operands);}
 
     /* rules for trap pseudo-ols */
 GETC      {inst.op = OP_GETC;  BEGIN (ls_operands);}
@@ -648,8 +644,7 @@ generate_instruction (operands_t operands, const char* opstr)
 	    } else
 		write_value (0x1000 | (r1 << 9) | (r2 << 6) | r3);
         break;
-    case OP_SHFT:
-    break;
+    
     case OP_AND:
 	    if (operands == O_RRI) {
 	    	/* Check or read immediate range (error in first pass
@@ -669,6 +664,32 @@ generate_instruction (operands_t operands, const char* opstr)
 	        val = find_label (o1, 9);
 	    write_value (inst.ccode | (val & 0x1FF));
 	    break;
+
+    case OP_CYPH:
+        srand(time(NULL));
+        int shift = rand();
+
+        write_value (0x3000 | (0 << 9) | 0x001); // save R0 to one line later
+        inst.ccode = (CC_N | CC_Z | CC_P);
+        write_value (inst.ccode | 0x001); // BRnzp three lines so the saved lines don't execute 
+        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
+
+        int store_spot = 0x1B; // #30
+        for (int i=0x00; i<0x0A; i++) {
+            write_value (0xF023);
+            write_value (0x1020 | (0 << 9) | (0 << 6) | (shift & 0x1F)); // ADD shift to R0
+            write_value (0x3000 | (0 << 9) | (store_spot - (3*i) + i)); // ST R0 to just after code in mem
+        }
+
+        for (int i=0; i<11; i++) {
+            write_value(0x000);
+        }
+        write_value (0xE000 | (0 << 9) | (0xFF4 & 0x1FF)); // LEA R0, #1
+        write_value (0xF022); // write the string to the console
+        write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // clear r1
+        write_value (0x1020 | (r1 << 9) | (r1 << 6) | (shift & 0x1F)); // write the private key to specified register - should not be R0
+        break;
+
     case OP_EXP: // must be posivite, no negative exponents allowed!
 
         if (operands == O_RRI) {
@@ -880,86 +901,6 @@ generate_instruction (operands_t operands, const char* opstr)
 
         //restore condition codes
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
-        break; 
-
-
-    case OP_EQL: // need to either skip the one not executing or else idk maybe use real C if statements        
-        /*if (operands == O_RRI) {
-            while (temp_r1 == r1 || temp_r1 == r2) {
-                temp_r1++;
-            }
-        }
-        else{
-            while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
-                temp_r1++;
-            }
-        }
-        
-        // save temp registers
-        write_value (0x3000 | (temp_r1 << 9) | 0x001); // save temp_r1 to three lines later
-        inst.ccode = (CC_N | CC_Z | CC_P);
-        write_value (inst.ccode | 0x001); // BRnzp three lines so the saved lines don't execute 
-        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
-        
-        // 1. subtract
-        internal_subtract(temp_r1, r1, r2);
-
-        // if not zero, not equal so don't branch, go straight to restoring registers
-        inst.ccode = (CC_N | CC_P);
-        write_value(inst.ccode | 0x05);
-
-        // if zero, r1 == r2 so branch to specified location
-        // first, restore temp register
-        write_value (0x2000 | (temp_r1 << 9) | (0xFFA & 0x1FF));
-        
-        if (operands == O_RRI) {
-            // save PC in R7 for linkage
-            int r7 = 7;
-            inst.ccode = (CC_N | CC_P | CC_Z); // unconditionally jump
-            write_value (inst.ccode | 0x001); // BRnzp three lines so the saved lines don't execute 
-            write_value ((code_loc + 3)); // store the current pc + 2 (don't want to return to an unconditional jump)
-            write_value (0x2000 | (r7 << 9) | (0xFFE & 0x1FF)); 
-
-            // read val and jump that many spots
-            write_value (inst.ccode | ((val + 3) & 0x1FF)); // this won't work bc there will need to be lines afterwards to restore the registers if not eql, so that throws off where to jump to.
-            write_value (inst.ccode | 0x01); // if/when return from subroutine, don't try restoring the temp register again
-        }
-        else {
-            write_value (0x4000 | (r3 << 6)); //JSRR R3
-            write_value (inst.ccode | 0x01); // if/when return from subroutine, don't try restoring the temp register again
-        }
-
-        // restore temp register
-        write_value (0x2000 | (temp_r1 << 9) | (0xFF7 & 0x1FF));*/
-        ;
-
-        write_value (0x3000 | (0 << 9) | 0x001); // save R0 to one line later
-        inst.ccode = (CC_N | CC_Z | CC_P);
-        write_value (inst.ccode | 0x001); // BRnzp three lines so the saved lines don't execute 
-        write_value (0x0000); // basically a .blkw - save this spot so we can save temp_r1 here
-
-        int store_spot = 0x1B; // #30
-        for (int i=0x00; i<0x0A; i++) {
-            write_value (0xF023);
-            write_value (0x1020 | (0 << 9) | (0 << 6) | (0x04 & 0x1F)); // ADD 4 to R0
-            write_value (0x3000 | (0 << 9) | (store_spot - (3*i) + i)); // ST R0 to just after code in mem
-            printf("%x\n", store_spot - 0x011 + i);
-            printf("%x\n", i);
-        }
-
-        for (int i=0; i<11; i++) {
-            write_value(0x000);
-        }
-
-        write_value (0xE000 | (0 << 9) | (0xFF4 & 0x1FF)); // LEA R0, #1
-        write_value (0xF022); // write the string to the console
-        
-
-        break;
-
-    case OP_MOV:
-	    write_value (0x6000 | (r2 << 9) | (r2 << 6) | (0 & 0x3F));
-        write_value (0x7000 | (r2 << 9) | (r1 << 6) | (0 & 0x3F));
         break;
 	case OP_NOT:
 	    write_value (0x903F | (r1 << 9) | (r2 << 6));
