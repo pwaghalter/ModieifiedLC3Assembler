@@ -1604,7 +1604,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x003, /* ADD: RRR or RRI formats only */
     0x003, /* AND: RRR or RRI formats only */
     0x0C0, /* BR: I or L formats only      */
-    0x020, /* CYPH: R format only          */
+    0x004, /* CYPH: RR format only         */
     0x003, /* EXP: RRR or RRI formats only */
     0x020, /* JMP: R format only           */
     0x0C0, /* JSR: I or L formats only     */
