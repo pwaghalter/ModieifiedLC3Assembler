@@ -1,6 +1,5 @@
 
-Memory Location 0xFDFF has been changed to a reserved memory location. It's content's will be overwritten with the use of rand pseduo op.
-
+Instructions Added to LC3++ Assembly Language:
 RST
     Assembler Format
         RST DR
@@ -81,16 +80,13 @@ RAND
     Assembler Format
         RAND DR, SR1
     Operation
-        DR <- 
-        SR1 = rand shift;
-        SR2 = address of first char in mem;
+        DR <- RAND(SR1)
         setcc();
     Description
-        Prompts user to input ten chars. Randomly generated private key is added to each char. Encrypted chars are written to memory, followed by 0 terminator.
-        Private key written to SR1. Address of first char written to SR2. Set condition code based on memory address.
-        SR1 and SR2 must be distinct or address of first char will be lost.
+        Generates a pseduo-random number using SR1 as seed. Stores pseduo-random number in DR.
+        The condition codes are set, based on whether the result is negative, zero, or positive.
     Examples
-        CYPH R1, R2 ; R1 <- private key; R2 <- address of first encrypted char
+        RAND R1, R2 ; R1 <- pseudo-random number
 CYPH
     Assembler Format
         CYPH SR1, SR2
@@ -109,5 +105,12 @@ CYPH
     Examples
         CYPH R1, R2 ; R1 <- private key; R2 <- address of first encrypted char
 
-Testing Framework:
-// explain
+Testing Framework for LC3++:
+    Checks whether new operations write the correct value to carry out the instruction.
+    Output format: 
+    <Test Name>
+    line num <line num>: <1 or 0>
+    Test Complete
+
+    A 1 following the line number means that the line has the expected value.
+    A 0 following the line number means that the line does not have the expected value.
