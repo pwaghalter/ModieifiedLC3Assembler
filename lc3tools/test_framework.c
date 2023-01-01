@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-int a_output[100];
+#define MAX_INST_LEN 50
+int a_output[MAX_INST_LEN];
 int idx = 0;
 
 typedef enum ccode_t ccode_t;
@@ -30,13 +31,14 @@ enum operands_t {
     NUM_OPERANDS
 };
 
-void write_value(int);
+void write_value(int val);
 void multiply(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]);
 void subtract(int r1, int r2, int r3, int val, operands_t operands, inst_t inst, char o3[]);
 void or(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]);
 void exponent(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]);
 void internal_multiply(int r1, int temp_r1, int temp_r);
 void cyph(int r1, int r2);
+void internal_random(int r1, int r2, int temp_r1, int temp_r2);
 void reset(int r1);
 void test_rst();
 void test_sub_rrr_distinct();
@@ -54,6 +56,7 @@ void test_exp_rri();
 void test_cyph_no_r0();
 void test_cyph_r0_last();
 void test_cyph_r0_first();
+void test_rand();
 
 int read_val (const char* s, int* vptr, int bits);
 
@@ -74,6 +77,7 @@ int main(void) {
     test_cyph_no_r0();
     test_cyph_r0_last();
     test_cyph_r0_first();
+    test_rand();
 }
 
 void test_sub_rrr_distinct() {
@@ -619,6 +623,58 @@ void test_cyph_r0_first() {
     printf("Test Complete\n");
 }
 
+void test_rand() {
+    idx = 0;
+    int r1 = 1;
+    int r2 = 2;
+    int temp_r1 = 0;
+    int temp_r2 = 0;
+    inst.ccode = CC_;
+     
+    internal_random(r1, r2, temp_r1, temp_r2);
+
+    printf("RAND TEST\n");
+    printf("line num %d: %d\n", 0, a_output[0]==0x3002);
+    printf("line num %d: %d\n", 1, a_output[1]==0x3602);
+    printf("line num %d: %d\n", 2, a_output[2]==0x0E05);
+    printf("line num %d: %d\n", 3, a_output[3]==0x0000);
+    printf("line num %d: %d\n", 4, a_output[4]==0x0000);
+    printf("line num %d: %d\n", 5, a_output[5]==0x7D03);
+    printf("line num %d: %d\n", 6, a_output[6]==0x0444);
+    printf("line num %d: %d\n", 7, a_output[7]==0x7FC3);
+    printf("line num %d: %d\n", 8, a_output[8]==0x27FE);
+    printf("line num %d: %d\n", 9, a_output[9]==0x5020);
+    printf("line num %d: %d\n", 10, a_output[10]==0x1002);
+    printf("line num %d: %d\n", 11, a_output[11]==0x903F);
+    printf("line num %d: %d\n", 12, a_output[12]==0x1021);
+    printf("line num %d: %d\n", 13, a_output[13]==0x1003);
+    printf("line num %d: %d\n", 14, a_output[14]==0x0602);
+    printf("line num %d: %d\n", 15, a_output[15]==0x903F);
+    printf("line num %d: %d\n", 16, a_output[16]==0x1021);
+    printf("line num %d: %d\n", 17, a_output[17]==0x27F3);
+    printf("line num %d: %d\n", 18, a_output[18]==0x5260);
+    printf("line num %d: %d\n", 19, a_output[19]==0x1020);
+    printf("line num %d: %d\n", 20, a_output[20]==0x040A);
+    printf("line num %d: %d\n", 21, a_output[21]==0x16E0);
+    printf("line num %d: %d\n", 22, a_output[22]==0x0408);
+    printf("line num %d: %d\n", 23, a_output[23]==0x0204);
+    printf("line num %d: %d\n", 24, a_output[24]==0x96FF);
+    printf("line num %d: %d\n", 25, a_output[25]==0x16E1);
+    printf("line num %d: %d\n", 26, a_output[26]==0x903F);
+    printf("line num %d: %d\n", 27, a_output[27]==0x1021);
+    printf("line num %d: %d\n", 28, a_output[28]==0x1240);
+    printf("line num %d: %d\n", 29, a_output[29]==0x16FF);
+    printf("line num %d: %d\n", 30, a_output[30]==0x03FD);
+    printf("line num %d: %d\n", 31, a_output[31]==0x27E6);
+    printf("line num %d: %d\n", 32, a_output[32]==0x1243);
+    printf("line num %d: %d\n", 33, a_output[33]==0x27E5);
+    printf("line num %d: %d\n", 34, a_output[34]==0x5243);
+    printf("line num %d: %d\n", 35, a_output[35]==0x21DF);
+    printf("line num %d: %d\n", 36, a_output[36]==0x27DF);
+    printf("line num %d: %d\n", 37, a_output[37]==0x1260);
+    printf("Test Complete\n");
+}
+
 void multiply(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]) {
     #include "multiply.h"
 }
@@ -647,6 +703,9 @@ void cyph(int r1, int r2) {
     #include "cyph.h"
 }
 
+void internal_random(int r1, int r2, int temp_r1, int temp_r2) {
+    #include "random.h"
+}
 void write_value (int val) {
     a_output[idx] = val;
     idx++;
@@ -677,8 +736,4 @@ int read_val(const char* s, int* vptr, int bits) {
 
 void internal_multiply(int r1, int temp_r1, int temp_r2) {
     #include "internal_multiply.h"
-}
-
-void internal_subtract(int r1, int r2, int r3) {
-    #include "subtract_rrr.h"
 }

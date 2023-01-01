@@ -103,5 +103,5 @@
             write_value (0x2000 | (temp_r3 << 9) | (0xFE2 & 0x1FF));
         }
 
-        // reset condition codes
+        // restore condition codes
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));  

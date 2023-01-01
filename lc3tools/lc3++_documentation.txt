@@ -78,6 +78,19 @@ EXP
         EXP R1, R2, R3 ; R1 <- R2 ** R3
         EXP R1, R2, #5 ; R1 <- R2 ** 5   
 RAND
+    Assembler Format
+        RAND DR, SR1
+    Operation
+        DR <- 
+        SR1 = rand shift;
+        SR2 = address of first char in mem;
+        setcc();
+    Description
+        Prompts user to input ten chars. Randomly generated private key is added to each char. Encrypted chars are written to memory, followed by 0 terminator.
+        Private key written to SR1. Address of first char written to SR2. Set condition code based on memory address.
+        SR1 and SR2 must be distinct or address of first char will be lost.
+    Examples
+        CYPH R1, R2 ; R1 <- private key; R2 <- address of first encrypted char
 CYPH
     Assembler Format
         CYPH SR1, SR2
@@ -92,6 +105,9 @@ CYPH
     Description
         Prompts user to input ten chars. Randomly generated private key is added to each char. Encrypted chars are written to memory, followed by 0 terminator.
         Private key written to SR1. Address of first char written to SR2. Set condition code based on memory address.
-        SR1 and SR2 must be distinct or address of first char will be lost.
+        SR1 and SR2 must be distinct or information will be lost.
     Examples
         CYPH R1, R2 ; R1 <- private key; R2 <- address of first encrypted char
+
+Testing Framework:
+// explain
