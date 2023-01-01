@@ -1,16 +1,21 @@
 .ORIG x3000
 
-;RST R1
-;ADD R1, R1, #2 ; R1 = 2
-;RST R2
-;SUB R2, R2, 10 ; R2 = -10
-;MLT R2, R1, R2 ; R2 = -20
-;RST R3
-;SUB R3, R3, 4 ; R3 = -4
-;EXP R3, R3, R1 ; R3 = 16
+;AND R1, R1, #0
+;ADD R1, R1, #5 ; R1 = 5
+;LD R2, #1 ; R2 = mem[x3004]
+;LEA R3, #1 ; R3 = x3005
+;AND R4, R4, #-1 ; R4 = 0
+;ADD R4, R4, #3
+;SUB R4, R4, R1 ; R4 = -2
+;EXP R3, R4, R4 ; R3 = x3005 (no negative exponents allowed)
+;LDR R5, R3, #0 ; R5 = x1923
+;OR R1, R3, R1 ; R1 = x3005
 
-MLT R1, R2, R3
+; EXP R1, R2, R3 done pos, r2<0, r3<0, r2=0, r3=0
+; EXP R1, R2, R2 done pos, r2<0, r2=0
+; EXP R1, R1, R2 done pos, r2<0, r3<0, r2=0, r3=0
+; EXP R1, R2, R1 done pos, r2<0, r3<0, r2=0, r3=0
+; EXP R1, R1, R1 done pos, r1<0, r1=0
+
 HALT
-
-;CYPH R1, R2
 .END

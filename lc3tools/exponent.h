@@ -22,8 +22,10 @@
         else {
             // if there is a negative exponent, no-op
             write_value (0x1020 | (r3 << 9) | (r3 << 6) | (0x00 & 0x1F));
+
+            // BRn to the end
             inst.ccode = CC_N;
-            write_value (inst.ccode | 0x025); // BRn to the end
+            write_value (inst.ccode | 0x025);
 
             // locate temporary registers
             while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {

@@ -27,18 +27,18 @@
 
     if (r1 != R0 && r2 != R0) {
         // write address of encrypted string to r2
-        write_value (0x1000 | (r2 << 9) | (r2 << 6) | (R0)); // ADD R2, R2, R0
+        write_value (0x1020 | (r2 << 9) | (R0 << 6) | (0x00 & 0x1F)); // ADD R2, R0, #0
 
         // write private key to R1
         write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // RST R1
         write_value (0x1020 | (r1 << 9) | (r1 << 6) | (shift & 0x1F)); // ADD R1, R1, private_key
 
         //restore R0
-        write_value (0x2000 | (R0 << 9) | (0xFCF & 0x1FF));
+        write_value (0x2000 | (R0 << 9) | (0xFD0 & 0x1FF));
     }
     else if (r1 == R0) {
         // write address of encrypted string to r2
-        write_value (0x1000 | (r2 << 9) | (r2 << 6) | (R0)); // ADD R2, R2, R0
+        write_value (0x1020 | (r2 << 9) | (R0 << 6) | (0x00 & 0x1F)); // ADD R2, R0, #0
 
         // write private key to R1
         write_value (0x5020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F)); // RST R1
