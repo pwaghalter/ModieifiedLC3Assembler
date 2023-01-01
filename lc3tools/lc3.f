@@ -130,7 +130,7 @@ static const int op_format_ok[NUM_OPS] = {
     0x003, /* MLT: RRR or RRI formats only */
     0x004, /* NOT: RR format only          */
     0x003, /* OR: RRR or RRI formats only  */
-    0x020, /* RAND: R format only          */
+    0x004, /* RAND: RR format only          */
     0x020, /* RST: R format only           */
     0x200, /* RTI: no operands allowed     */
     0x018, /* ST: RI or RL formats only    */

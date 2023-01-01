@@ -230,6 +230,7 @@ line num 45: 1
 line num 46: 1
 line num 47: 1
 line num 49: 1
+line num 50: 1
 Test Complete
 CYPH TEST R1, R0
 line num 0: 1
@@ -269,6 +270,7 @@ line num 43: 1
 line num 44: 1
 line num 45: 1
 line num 46: 1
+line num 48: 1
 Test Complete
 CYPH TEST R0, R1
 line num 0: 1
@@ -309,4 +311,5 @@ line num 44: 1
 line num 45: 1
 line num 46: 1
 line num 47: 1
+line num 49: 1
 Test Complete

@@ -11,11 +11,22 @@
 ;LDR R5, R3, #0 ; R5 = x1923
 ;OR R1, R3, R1 ; R1 = x3005
 
-; EXP R1, R2, R3 done pos, r2<0, r3<0, r2=0, r3=0
+; EXP R1, R2, R3 ; done pos, r2<0, r3<0, r2=0, r3=0
 ; EXP R1, R2, R2 done pos, r2<0, r2=0
 ; EXP R1, R1, R2 done pos, r2<0, r3<0, r2=0, r3=0
 ; EXP R1, R2, R1 done pos, r2<0, r3<0, r2=0, r3=0
 ; EXP R1, R1, R1 done pos, r1<0, r1=0
 
+;spot RAND R1
+;SUB R1, R2, R3
+;BRnzp spot
+
+; SUB R1, R2, R3 done pos, r2<0, r3<0, r2=0, r3=0
+; SUB R1, R2, R2 ; done pos, r2<0, r2=0
+; SUB R1, R1, R2 ; done pos, r2<0, r3<0, r2=0, r3=0
+; SUB R1, R2, R1 ; done pos, r2<0, r3<0, r2=0, r3=0
+; SUB R1, R1, R1 ; done pos, r1<0, r1=0
+
+RAND R1, R2
 HALT
 .END

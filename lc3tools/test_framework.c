@@ -534,6 +534,7 @@ void test_cyph_no_r0() {
     printf("line num %d: %d\n", 46, a_output[46]==0x1420);
     printf("line num %d: %d\n", 47, a_output[47]==0x5260);
     printf("line num %d: %d\n", 49, a_output[49]==0x21D0);
+    printf("line num %d: %d\n", 50, a_output[50]==0x14A0);
     printf("Test Complete\n");
 }
 
@@ -573,6 +574,7 @@ void test_cyph_r0_last() {
     printf("line num %d: %d\n", 44, a_output[44]==0xE1F4);
     printf("line num %d: %d\n", 45, a_output[45]==0xF022);
     printf("line num %d: %d\n", 46, a_output[46]==0x5260);
+    printf("line num %d: %d\n", 48, a_output[48]==0x1020);
     printf("Test Complete\n");
 }
 
@@ -613,7 +615,7 @@ void test_cyph_r0_first() {
     printf("line num %d: %d\n", 45, a_output[45]==0xF022);
     printf("line num %d: %d\n", 46, a_output[46]==0x1220);
     printf("line num %d: %d\n", 47, a_output[47]==0x5020);
-
+    printf("line num %d: %d\n", 49, a_output[49]==0x1260);
     printf("Test Complete\n");
 }
 
