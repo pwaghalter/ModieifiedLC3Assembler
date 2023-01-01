@@ -8,7 +8,9 @@
 ;RST R3
 ;SUB R3, R3, 4 ; R3 = -4
 ;EXP R3, R3, R1 ; R3 = 16
-;HALT
 
-CYPH R1, R2
+MLT R1, R2, R3
+HALT
+
+;CYPH R1, R2
 .END

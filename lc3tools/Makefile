@@ -92,7 +92,7 @@ dist_lc3as: lc3as${EXE}
 lc3as${EXE}: lex.lc3.o symbol.o
 	${GCC} ${LDFLAGS} -o lc3as${EXE} lex.lc3.o symbol.o
 
-lex.lc3.c: lc3.f cyph.h exponent.h multiply.h or.h reset.h subtract_rrr.h subtract.h
+lex.lc3.c: lc3.f cyph.h exponent.h multiply.h or.h random.h reset.h subtract_rrr.h subtract.h
 	${FLEX} -i -Plc3 lc3.f
 
 
