@@ -74,7 +74,7 @@ EXP
     Description
         Contents of first source operand are raised to the power of contents of second source operand, and result is stored in destination register.
         The condition codes are set, based on whether the result is negative, zero, or positive. 
-        Second source operand must be >= 0. If second source operand < 0, nothing will be computed and condition codes will be set to negative.
+        Second source operand must be >= 0. If second source operand < 0, nothing will be computed and condition codes may be set to negative.
         0 ** 0 = 1 in this implementation.
     Examples
         EXP R1, R2, R3 ; R1 <- R2 ** R3
