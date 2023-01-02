@@ -118,7 +118,7 @@ Testing Framework for LC3++:
     A 0 following the line number means that the line does not have the expected value.
 
 Other Notes:
-Immediate offsets should no longer be used in BR, JSR, JSRR, LDI, LEA, ST, STI
+Immediate offsets should no longer be used in BR, JSR, JSRR, LD, LDI, LEA, ST, STI
 
 -----------------------------
    DESCRIPTION OF CONTENTS
