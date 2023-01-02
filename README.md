@@ -4,8 +4,11 @@ LC3++ DOCUMENTATION
 
 
 Instructions Added to LC3++ Assembly Language:
+
 RST
+
     Assembler Format
+    
         RST DR
     Operation
         DR = 0
