@@ -124,7 +124,7 @@ CYPH
 
 Testing Framework for LC3++:
 
-    Checks whether new operations write the correct value to carry out the instruction. Writes output to test_output file.
+    Checks whether new operations write the correct value to carry out the instruction. Writes output to test_results file.
     Output format: 
         <Test Name>
         line num <line num>: <1 or 0>
