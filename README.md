@@ -3,7 +3,9 @@ LC3++ DOCUMENTATION
 -------------------------------
 
 Instructions Added to LC3++ Assembly Language:
+
 RST
+
     Assembler Format
         RST DR
     Operation
@@ -13,7 +15,9 @@ RST
         Resets a register specified by DR. Sets condition codes to zero.
     Examples
         RST R1 ; R1 <- 0
+        
 SUB
+
     Assembler Formats
         SUB DR, SR1, SR2
         SUB DR, SR1, imm5
@@ -29,7 +33,9 @@ SUB
     Examples
         SUB R1, R2, R3 ; R1 <- R2 - R3
         SUB R1, R2, #5 ; R1 <- R2 - 5
+        
 MLT
+
     Assembler Formats
         MLT DR, SR1, SR2
         MLT DR, SR1, imm5
@@ -45,7 +51,9 @@ MLT
     Examples
         MLT R1, R2, R3 ; R1 <- R2 * R3
         MLT R1, R2, #5 ; R1 <- R2 * 5
+        
 OR
+
     Assembler Formats
         OR DR, SR1, SR2
         OR DR, SR1, imm5
@@ -61,7 +69,9 @@ OR
     Examples
         OR R1, R2, R3 ; R1 <- R2 OR R3
         OR R1, R2, #5 ; R1 <- R2 OR 5
+        
 EXP
+
     Assembler Formats
         EXP DR, SR1, SR2
         EXP DR, SR1, imm5
@@ -79,7 +89,9 @@ EXP
     Examples
         EXP R1, R2, R3 ; R1 <- R2 ** R3
         EXP R1, R2, #5 ; R1 <- R2 ** 5   
+        
 RAND
+
     Assembler Format
         RAND DR, SR1
     Operation
@@ -90,7 +102,9 @@ RAND
         The condition codes are set, based on whether the pseudo-random number is negative, zero, or positive.
     Examples
         RAND R1, R2 ; R1 <- pseudo-random number
+        
 CYPH
+
     Assembler Format
         CYPH DR1, DR2
     Operation
@@ -109,6 +123,7 @@ CYPH
         CYPH R1, R2 ; R1 <- private key, R2 <- address of first encrypted char
 
 Testing Framework for LC3++:
+
     Checks whether new operations write the correct value to carry out the instruction.
     Output format: 
         <Test Name>
@@ -118,6 +133,7 @@ Testing Framework for LC3++:
     A 0 following the line number means that the line does not have the expected value.
 
 Other Notes:
+
 Immediate offsets should no longer be used in BR, JSR, JSRR, LD, LDI, LEA, ST, STI
 
 -----------------------------
