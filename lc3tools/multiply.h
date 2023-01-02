@@ -34,14 +34,14 @@
         write_value (0x5020 | (temp_r2 << 9) | (temp_r2 << 6) | (0x00 & 0x1F)); // clear temp_r2
         write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (val & 0x1F)); // add temp_r2, temp_r2, #val
     }
-    else{
+    else {
         write_value (0x1020 | (temp_r2 << 9) | (r3 << 6) | (0x00 & 0x1F)); // ADD temp_r2, r3, #0
     }
 
     // logic abstracted for reuse in other ops
-    #include "internal_multiply.h"
+    internal_multiply(r1, temp_r1, temp_r2);
 
-    // restore temp registers
+    // restore temp registers; need separate case for RRI and RRR because RRI has one more line of lc3 code
     if (operands == O_RRI) {
         write_value (0x2000 | (temp_r1 << 9) | (0xFED & 0x1FF));
         write_value (0x2000 | (temp_r2 << 9) | (0xFED & 0x1FF));

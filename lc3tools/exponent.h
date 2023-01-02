@@ -49,6 +49,12 @@
         write_value (0x0000);
         write_value (0x0000);
 
+        /* Do the actual exponentiation. 
+        temp_r2 is used as a counter of how many times the multiplication has been done.
+        temp_r1 is used as a counter in multiplication, so it must be restored after each multiplication.
+        temp_r3 is used to hold the value that will be multiplied.
+        */
+
         // set temp_r1 = r2
         write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); // ADD temp_r1, r2, #0
 
@@ -88,7 +94,7 @@
         // decrement temp_r2
         write_value (0x1020 | (temp_r2 << 9) | (temp_r2 << 6) | (0xFF & 0x1F));
 
-        // if zero, then we're done. If not, multiply again
+        // if zero, then we're done. If not, multiply again.
         write_value (0x0A00 | (0xFEC & 0x1FF));
 
         // restore temp registers

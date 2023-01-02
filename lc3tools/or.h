@@ -25,7 +25,7 @@
     write_value (0x0000);
 
     // set temp registers
-    write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); //ADD temp_r1, r2, #0
+    write_value (0x1020 | (temp_r1 << 9) | (r2 << 6) | (0x00 & 0x1F)); // ADD temp_r1, r2, #0
 
     if (operands == O_RRI) {
         /* Check or read immediate range (error in first pass

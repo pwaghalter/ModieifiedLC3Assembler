@@ -16,7 +16,6 @@ enum ccode_t {
 
 typedef struct inst_t inst_t;
 struct inst_t {
-    // opcode_t op;
     ccode_t  ccode;
 };
 
@@ -32,10 +31,10 @@ enum operands_t {
 };
 
 void write_value(int val);
-void multiply(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]);
-void subtract(int r1, int r2, int r3, int val, operands_t operands, inst_t inst, char o3[]);
-void or(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]);
-void exponent(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]);
+void multiply(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, char o3[]);
+void subtract(int r1, int r2, int r3, int val, operands_t operands, char o3[]);
+void or(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, char o3[]);
+void exponent(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, char o3[]);
 void internal_multiply(int r1, int temp_r1, int temp_r);
 void cyph(int r1, int r2);
 void internal_random(int r1, int r2, int temp_r1, int temp_r2);
@@ -80,6 +79,19 @@ int main(void) {
     test_rand();
 }
 
+/* Test for RST */
+void test_rst() {
+    idx = 0; //reset each time
+    int r1 = 1;
+    
+    reset(r1);
+    
+    printf("RST TEST\n");
+    printf("line num %d: %d\n", 0, a_output[0]==0x5260);
+    printf("Test Complete\n");
+}
+
+/* Tests for SUB */
 void test_sub_rrr_distinct() {
     idx = 0; //reset each time
     int r1 = 1;
@@ -90,10 +102,9 @@ void test_sub_rrr_distinct() {
 
     operands_t operands = O_RRR;
 
-    inst_t inst;
     inst.ccode = CC_;
 
-    subtract(r1, r2, r3, val, operands, inst, o3);
+    subtract(r1, r2, r3, val, operands, o3);
 
     printf("SUB RRR TEST. Distinct registers\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x92FF);
@@ -112,16 +123,16 @@ void test_sub_rrr_second_eq_last() {
 
     operands_t operands = O_RRR;
 
-    inst_t inst;
     inst.ccode = CC_;
 
-    subtract(r1, r2, r3, val, operands, inst, o3);
+    subtract(r1, r2, r3, val, operands, o3);
 
     printf("SUB RRR TEST. Second register same as last\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x92BF);
     printf("line num %d: %d\n", 1, a_output[1]==0x1261);
     printf("line num %d: %d\n", 2, a_output[2]==0x1242);
 }
+
 void test_sub_rrr_first_eq_second() {
     idx = 0; //reset each time
     int r1 = 1;
@@ -132,10 +143,9 @@ void test_sub_rrr_first_eq_second() {
 
     operands_t operands = O_RRR;
 
-    inst_t inst;
     inst.ccode = CC_;
 
-    subtract(r1, r2, r3, val, operands, inst, o3);
+    subtract(r1, r2, r3, val, operands, o3);
 
     printf("SUB RRR TEST. First register same as second\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x927F);
@@ -155,10 +165,9 @@ void test_sub_rrr_first_eq_last() {
 
     operands_t operands = O_RRR;
 
-    inst_t inst;
     inst.ccode = CC_;
 
-    subtract(r1, r2, r3, val, operands, inst, o3);
+    subtract(r1, r2, r3, val, operands, o3);
 
     printf("SUB RRR TEST. First register same as second\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x927F);
@@ -176,10 +185,9 @@ void test_sub_rrr_all_eq() {
 
     operands_t operands = O_RRR;
 
-    inst_t inst;
     inst.ccode = CC_;
 
-    subtract(r1, r2, r3, val, operands, inst, o3);
+    subtract(r1, r2, r3, val, operands, o3);
 
     printf("SUB RRR TEST. All registers the same\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x5260);
@@ -195,27 +203,16 @@ void test_sub_rri() {
 
     operands_t operands = O_RRI;
 
-    inst_t inst;
     inst.ccode = CC_;
 
-    subtract(r1, r2, r3, val, operands, inst, o3);
+    subtract(r1, r2, r3, val, operands, o3);
 
     printf("SUB RRI TEST. Distinct registers\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x12BE);
     printf("Test Complete\n");
 }
 
-void test_rst() {
-    idx = 0; //reset each time
-    int r1 = 1;
-    
-    reset(r1);
-    
-    printf("RST TEST\n");
-    printf("line num %d: %d\n", 0, a_output[0]==0x5260);
-    printf("Test Complete\n");
-}
-
+/* Test for MLT */
 void test_mlt_rrr() {
     idx = 0; //reset each time
     int r1 = 1;
@@ -229,10 +226,9 @@ void test_mlt_rrr() {
 
     operands_t operands = O_RRR;
 
-    inst_t inst;
     inst.ccode = CC_;
      
-    multiply(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, inst, o3);
+    multiply(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, o3);
 
     printf("MLT RRR TEST. Distinct registers\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x3002);
@@ -274,10 +270,9 @@ void test_mlt_rri() {
 
     operands_t operands = O_RRI;
 
-    inst_t inst;
     inst.ccode = CC_;
      
-    multiply(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, inst, o3);
+    multiply(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, o3);
 
     printf("MLT RRI TEST. Distinct registers\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x3002);
@@ -307,6 +302,7 @@ void test_mlt_rri() {
     printf("Test Complete\n");
 }
 
+/* Tests for OR */
 void test_or_rrr() {
     idx = 0;
     int r1 = 1;
@@ -320,10 +316,9 @@ void test_or_rrr() {
 
     operands_t operands = O_RRR;
 
-    inst_t inst;
     inst.ccode = CC_;
      
-    or(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, inst, o3);
+    or(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, o3);
 
     printf("OR RRR TEST. Distinct registers\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x3002);
@@ -356,10 +351,9 @@ void test_or_rri() {
 
     operands_t operands = O_RRI;
 
-    inst_t inst;
     inst.ccode = CC_;
      
-    or(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, inst, o3);
+    or(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, o3);
 
     printf("OR RRI TEST. Distinct registers\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x3002);
@@ -380,6 +374,7 @@ void test_or_rri() {
     printf("Test Complete\n");
 }
 
+/* Tests for EXP */
 void test_exp_rri() {
     idx = 0; //reset each time
     int r1 = 1;
@@ -391,13 +386,10 @@ void test_exp_rri() {
     int temp_r2 = 0;
     int temp_r3 = 0;
 
-    int pt =0; // do this if have time
     operands_t operands = O_RRI;
 
-    inst_t inst;
-    // inst.ccode = CC_;
-    
-    exponent(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, inst, o3);
+    inst.ccode = CC_;    
+    exponent(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, o3);
 
     printf("EXP RRI TEST\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x3003);
@@ -410,34 +402,34 @@ void test_exp_rri() {
     printf("line num %d: %d\n", 7, a_output[7]==0x10A0);
     printf("line num %d: %d\n", 8, a_output[8]==0x56E0);
     printf("line num %d: %d\n", 9, a_output[9]==0x16E2);
-    printf("line num %d: %d\n", 11, a_output[10]==0x5260);
-    printf("line num %d: %d\n", 12, a_output[11]==0x1261);
-    printf("line num %d: %d\n", 13, a_output[12]==0x16E0);
-    printf("line num %d: %d\n", 14, a_output[13]==0x0414);
-    printf("line num %d: %d\n", 15, a_output[14]==0x1860);
-    printf("line num %d: %d\n", 16, a_output[15]==0x3001);
-    printf("line num %d: %d\n", 17, a_output[16]==0x0E01);
-    printf("line num %d: %d\n", 18, a_output[17]==0x0000);
-    printf("line num %d: %d\n", 19, a_output[18]==0x5260);
-    printf("line num %d: %d\n", 20, a_output[19]==0x1920);
-    printf("line num %d: %d\n", 21, a_output[20]==0x040A);
-    printf("line num %d: %d\n", 22, a_output[21]==0x1020);
-    printf("line num %d: %d\n", 23, a_output[22]==0x0408);
-    printf("line num %d: %d\n", 24, a_output[23]==0x0204);
-    printf("line num %d: %d\n", 25, a_output[24]==0x903F);
-    printf("line num %d: %d\n", 26, a_output[25]==0x1021);
-    printf("line num %d: %d\n", 27, a_output[26]==0x993F);
-    printf("line num %d: %d\n", 28, a_output[27]==0x1921);
-    printf("line num %d: %d\n", 29, a_output[28]==0x1244);
-    printf("line num %d: %d\n", 30, a_output[29]==0x103F);
-    printf("line num %d: %d\n", 31, a_output[30]==0x03FD);
-    printf("line num %d: %d\n", 32, a_output[31]==0x21F1);
-    printf("line num %d: %d\n", 33, a_output[32]==0x16FF);
-    printf("line num %d: %d\n", 34, a_output[33]==0x0BEC);
-    printf("line num %d: %d\n", 35, a_output[34]==0x21E1);
-    printf("line num %d: %d\n", 36, a_output[35]==0x27E1);
-    printf("line num %d: %d\n", 37, a_output[36]==0x29E1);
-    printf("line num %d: %d\n", 38, a_output[37]==0x1260);
+    printf("line num %d: %d\n", 10, a_output[10]==0x5260);
+    printf("line num %d: %d\n", 11, a_output[11]==0x1261);
+    printf("line num %d: %d\n", 12, a_output[12]==0x16E0);
+    printf("line num %d: %d\n", 13, a_output[13]==0x0414);
+    printf("line num %d: %d\n", 14, a_output[14]==0x1860);
+    printf("line num %d: %d\n", 15, a_output[15]==0x3001);
+    printf("line num %d: %d\n", 16, a_output[16]==0x0E01);
+    printf("line num %d: %d\n", 17, a_output[17]==0x0000);
+    printf("line num %d: %d\n", 18, a_output[18]==0x5260);
+    printf("line num %d: %d\n", 19, a_output[19]==0x1920);
+    printf("line num %d: %d\n", 20, a_output[20]==0x040A);
+    printf("line num %d: %d\n", 21, a_output[21]==0x1020);
+    printf("line num %d: %d\n", 22, a_output[22]==0x0408);
+    printf("line num %d: %d\n", 23, a_output[23]==0x0204);
+    printf("line num %d: %d\n", 24, a_output[24]==0x903F);
+    printf("line num %d: %d\n", 25, a_output[25]==0x1021);
+    printf("line num %d: %d\n", 26, a_output[26]==0x993F);
+    printf("line num %d: %d\n", 27, a_output[27]==0x1921);
+    printf("line num %d: %d\n", 28, a_output[28]==0x1244);
+    printf("line num %d: %d\n", 29, a_output[29]==0x103F);
+    printf("line num %d: %d\n", 30, a_output[30]==0x03FD);
+    printf("line num %d: %d\n", 31, a_output[31]==0x21F1);
+    printf("line num %d: %d\n", 32, a_output[32]==0x16FF);
+    printf("line num %d: %d\n", 33, a_output[33]==0x0BEC);
+    printf("line num %d: %d\n", 34, a_output[34]==0x21E1);
+    printf("line num %d: %d\n", 35, a_output[35]==0x27E1);
+    printf("line num %d: %d\n", 36, a_output[36]==0x29E1);
+    printf("line num %d: %d\n", 37, a_output[37]==0x1260);
     printf("Test Complete\n");
 }
 
@@ -453,10 +445,8 @@ void test_exp_rrr() {
     int temp_r3 = 0;
 
     operands_t operands = O_RRR;
-
-    inst_t inst;
     
-    exponent(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, inst, o3);
+    exponent(r1, r2, r3, val, operands, temp_r1, temp_r2, temp_r3, o3);
 
     printf("EXP RRR TEST\n");
     printf("line num %d: %d\n", 0, a_output[0]==0x16E0);
@@ -500,6 +490,8 @@ void test_exp_rrr() {
     printf("line num %d: %d\n", 38, a_output[38]==0x1260);
     printf("Test Complete\n");
 }
+
+/* Tests for CYPH */
 void test_cyph_no_r0() {
     idx = 0; //reset each time
     int r1 = 1;
@@ -623,6 +615,7 @@ void test_cyph_r0_first() {
     printf("Test Complete\n");
 }
 
+/* Tests for RAND */
 void test_rand() {
     idx = 0;
     int r1 = 1;
@@ -675,7 +668,8 @@ void test_rand() {
     printf("Test Complete\n");
 }
 
-void multiply(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]) {
+/* Actual Operation Functions */
+void multiply(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, char o3[]) {
     #include "multiply.h"
 }
 
@@ -683,15 +677,15 @@ void reset(int r1) {
     #include "reset.h"
 }
 
-void subtract(int r1, int r2, int r3, int val, operands_t operands, inst_t inst, char o3[]) {
+void subtract(int r1, int r2, int r3, int val, operands_t operands, char o3[]) {
     #include "subtract.h"
 }
 
-void or(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]) {
+void or(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, char o3[]) {
     #include "or.h"
 }
 
-void exponent(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, inst_t inst, char o3[]) {
+void exponent(int r1, int r2, int r3, int val, operands_t operands, int temp_r1, int temp_r2, int temp_r3, char o3[]) {
     int x = 1;
     switch(x) {
         case 1:
@@ -706,12 +700,13 @@ void cyph(int r1, int r2) {
 void internal_random(int r1, int r2, int temp_r1, int temp_r2) {
     #include "random.h"
 }
+
+// new write_val for testing
 void write_value (int val) {
     a_output[idx] = val;
     idx++;
 }
 
-// built in read val too complicated for testing
 int read_val(const char* s, int* vptr, int bits) {
     char* trash;
     long v;
