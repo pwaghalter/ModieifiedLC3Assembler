@@ -90,7 +90,7 @@ test: test_results
 #
 test_results: testlc3${EXE} 
 	./testlc3${EXE}  >test_results
-testlc3${EXE} : test_framework.c cyph.h exponent.h multiply.h or.h random.h reset.h subtract.h
+testlc3${EXE} : test_framework.c cyph.h exponent.h multiply.h internal_multiply.h or.h random.h reset.h subtract.h
 	${GCC} ${LDFLAGS} -o testlc3${EXE}  test_framework.c
 
 #
