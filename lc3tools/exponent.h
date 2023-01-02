@@ -31,7 +31,7 @@
             while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
                 temp_r1++;
             }
-             while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3 || temp_r2 == temp_r1) {
+            while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3 || temp_r2 == temp_r1) {
                 temp_r2++;
             }
             while (temp_r3 == r1 || temp_r3 == r2 || temp_r3 == r3 || temp_r3 == temp_r1 || temp_r3 == temp_r2) {

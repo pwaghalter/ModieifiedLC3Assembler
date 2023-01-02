@@ -8,7 +8,7 @@
         }
     }
     else {
-       while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
+        while (temp_r1 == r1 || temp_r1 == r2 || temp_r1 == r3) {
             temp_r1++;
         }
         while (temp_r2 == r1 || temp_r2 == r2 || temp_r2 == r3 || temp_r2 == temp_r1) {

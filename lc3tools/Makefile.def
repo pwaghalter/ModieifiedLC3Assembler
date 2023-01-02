@@ -88,6 +88,7 @@ test: test_results
 # 
 # Makefile fragment for test
 #
+
 test_results: testlc3${EXE} 
 	./testlc3${EXE}  >test_results
 testlc3${EXE} : test_framework.c cyph.h exponent.h multiply.h internal_multiply.h or.h random.h reset.h subtract.h
