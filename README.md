@@ -124,13 +124,14 @@ CYPH
 
 Testing Framework for LC3++:
 
-    Checks whether new operations write the correct value to carry out the instruction.
+    Checks whether new operations write the correct value to carry out the instruction. Writes output to test_output file.
     Output format: 
         <Test Name>
         line num <line num>: <1 or 0>
         Test Complete
     A 1 following the line number means that the line has the expected value.
     A 0 following the line number means that the line does not have the expected value.
+    
 
 Other Notes:
 
