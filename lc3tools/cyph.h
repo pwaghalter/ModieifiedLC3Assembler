@@ -1,6 +1,6 @@
 
     /* Generate private key, making sure it is not zero */
-    srand(time(NULL));
+    srand(clock());
     int shift = rand();
     while ((shift & 0x1F) == 0) {
         shift = rand();
