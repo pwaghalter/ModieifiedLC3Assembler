@@ -92,19 +92,19 @@ RAND
         RAND R1, R2 ; R1 <- pseudo-random number
 CYPH
     Assembler Format
-        CYPH SR1, SR2
+        CYPH DR1, DR2
     Operation
         repeat 10 times:
             get char;
             char += rand shift;
             write char;
-        SR1 = rand shift;
-        SR2 = address of first char in mem;
+        DR1 = rand shift;
+        DR2 = address of first char in mem;
         setcc();
     Description
         Prompts user to input ten chars. Randomly generated private key is added to each char. Encrypted chars are written to memory, followed by 0 terminator.
-        Private key written to SR1. Address of first char written to SR2. Set condition code based on memory address.
-        SR1 and SR2 must be distinct or information will be lost.
+        Private key written to DR1. Address of first char written to DR2. Set condition code based on memory address.
+        DR1 and DR2 must be distinct or information will be lost.
     Examples
         CYPH R1, R2 ; R1 <- private key, R2 <- address of first encrypted char
 
