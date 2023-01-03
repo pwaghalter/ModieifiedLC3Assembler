@@ -43,7 +43,7 @@
     inst.ccode = (CC_P | CC_Z); // if (modulus - seed) >= 0, valid seed, don't negate
     write_value (inst.ccode | (0x002 & 0x1FF));
 
-    // negate temp_r1 - this will be the new seed, now we know for sure seed < modulus
+    // negate temp_r1 - this will be the new seed
     write_value (0x903F | (temp_r1 << 9) | (temp_r1 << 6));
     write_value (0x1020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x01 & 0x1F));
 
