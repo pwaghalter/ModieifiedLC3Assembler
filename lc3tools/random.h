@@ -31,8 +31,8 @@
     write_value (0x5020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x00 & 0x1F)); // clear temp_r2
     write_value (0x1000 | (temp_r1 << 9) | (temp_r1 << 6) | (r2));
 
-    /* Seed must be smaller than modulus. To ensure this, subtract modulus-seed. 
-    If the result is negative, i.e. seed > modulus, negate the result and use it as the seed. */
+    /* Subtract modulus-seed. 
+    If the result is negative, negate the result and use it as the seed. */
 
     // negate temp_r1
     write_value (0x903F | (temp_r1 << 9) | (temp_r1 << 6));
