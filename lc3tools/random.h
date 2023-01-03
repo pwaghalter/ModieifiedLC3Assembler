@@ -25,7 +25,7 @@
     write_value(0x7FC3);
 
     // LD temp_r2, modulus
-    // write_value (0x2000 | (temp_r2 << 9) | (0xFFE & 0x1FF));
+    write_value (0x2000 | (temp_r2 << 9) | (0xFFE & 0x1FF));
 
     // temp_r1 = seed
     write_value (0x5020 | (temp_r1 << 9) | (temp_r1 << 6) | (0x00 & 0x1F)); // clear temp_r2
@@ -66,8 +66,8 @@
     write_value (0x5000 | (r1 << 9) | (r1 << 6) | temp_r2);
 
     // restore temp registers
-    write_value (0x2000 | (temp_r1 << 9) | (0xFE0 & 0x1FF));
-    write_value (0x2000 | (temp_r2 << 9) | (0xFE0 & 0x1FF));
+    write_value (0x2000 | (temp_r1 << 9) | (0xFDF & 0x1FF));
+    write_value (0x2000 | (temp_r2 << 9) | (0xFDF & 0x1FF));
 
     // restore condition codes
     write_value (0x1020 | (r1 << 9) | (r1 << 6) | (0x00 & 0x1F));
